@@ -77,14 +77,22 @@ function removePastTrainings(){
 }
 
 // ---------- BARN ----------
-function addKid(ti) {
-  const name = prompt("Barnets namn:"); if(!name) return;
-  trainings[ti].kids.push({ name, needDrive:true, needPickup:true });
+function addKidRow(ti){
+  trainings[ti].kids.push({name:"", needDrive:true, needPickup:true});
   save(); render();
 }
-function editKid(ti,ki){ const k=trainings[ti].kids[ki]; const name=prompt("Barnets namn:",k.name); if(!name) return; k.name=name; save(); render();}
-function deleteKid(ti,ki){ if(!confirm("Ta bort detta barn?")) return; const kidName=trainings[ti].kids[ki].name; trainings[ti].drivers.forEach(d=>{ d.driveKids=(d.driveKids||[]).filter(x=>x!==kidName); d.pickupKids=(d.pickupKids||[]).filter(x=>x!==kidName); }); trainings[ti].kids.splice(ki,1); save(); render();}
+function deleteKid(ti,ki){ 
+  if(!confirm("Ta bort detta barn?")) return; 
+  const kidName=trainings[ti].kids[ki].name; 
+  trainings[ti].drivers.forEach(d=>{
+    d.driveKids=(d.driveKids||[]).filter(x=>x!==kidName); 
+    d.pickupKids=(d.pickupKids||[]).filter(x=>x!==kidName); 
+  }); 
+  trainings[ti].kids.splice(ki,1); 
+  save(); render();
+}
 function toggleKidNeed(ti,ki,type){ const k=trainings[ti].kids[ki]; if(type==="drive") k.needDrive=!k.needDrive; if(type==="pickup") k.needPickup=!k.needPickup; save(); render();}
+function updateKidName(ti,ki,el){ trainings[ti].kids[ki].name = el.value; save(); render(); }
 
 // ---------- FÖRÄLDER ----------
 function getDriver(ti){ let d=trainings[ti].drivers.find(x=>x.name===user); if(!d){ d={ name:user, canDrive:false, canPickup:false, driveKids:[], pickupKids:[] }; trainings[ti].drivers.push(d);} return d;}
@@ -111,8 +119,8 @@ function render(){
     const isPast = tEndDate<now;
     const bgColor = isPast ? "#ddd" : "#e9f5ee";
 
-    // ---------- Barn (tabell-liknande kompakt)
-    let kidsHTML = `<table><tr><th>Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Redigera</th></tr>`;
+    // ---------- Barn (tabell med direktredigering)
+    let kidsHTML = `<table><tr><th>Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Ta bort</th></tr>`;
     t.kids.forEach((k,ki)=>{
       const driveChecked = k.needDrive?"checked":"";
       const pickupChecked = k.needPickup?"checked":"";
@@ -123,17 +131,17 @@ function render(){
       const colorClass = missing ? "label-red" : "label-green";
 
       kidsHTML += `<tr style="background:${missing?'#ffe6e6':'#e6ffe6'};">
-        <td><strong class="${colorClass}">${k.name}</strong></td>
+        <td><input type="text" value="${k.name}" class="${colorClass}" style="width:100%" onblur="updateKidName(${ti},${ki},this)"></td>
         <td><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
         <td><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
         <td><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}></td>
         <td><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup?"disabled":""}></td>
-        <td><button onclick="editKid(${ti},${ki})">✏️</button> <button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
+        <td><button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
       </tr>`;
     });
-    kidsHTML += `</table>`;
+    kidsHTML += `</table><button onclick="addKidRow(${ti})">➕ Lägg till barn</button>`;
 
-    // ---------- Föräldrar (tabell-liknande kompakt)
+    // ---------- Föräldrar (tabell)
     let driversHTML = `<table><tr><th>Förälder</th><th>Kan skjutsa</th><th>Kan hämta</th><th>Skjutsar</th><th>Hämtar</th></tr>`;
     t.drivers.forEach(d=>{
       const driveKids=Array.isArray(d.driveKids)?d.driveKids:[]; 
@@ -147,7 +155,7 @@ function render(){
       </tr>`;
     });
     driversHTML += `</table>`;
-
+    
     div.innerHTML += `<div class="training" style="background:${bgColor}">
       <div class="training-header">
         <span class="training-time">${t.date} ${t.startTime}-${t.endTime}</span>
@@ -160,12 +168,11 @@ function render(){
       <div class="sections">
         <div class="section">
           <h3>⚽ Barn</h3>
-          ${kidsHTML || "Inga barn inlagda"}
-          <button onclick="addKid(${ti})">➕ Lägg till barn</button>
+          ${kidsHTML}
         </div>
         <div class="section">
           <h3>🚗 Föräldrar</h3>
-          ${driversHTML || "Ingen anmäld"}
+          ${driversHTML}
           ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
           <div style="margin-top:5px;">
             <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label><br>
