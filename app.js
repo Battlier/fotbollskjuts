@@ -101,6 +101,8 @@ function toggleAssignKid(ti,kidName,type){ const d=getDriver(ti); let list=type=
 function removeDriver(ti){ if(!confirm("Ta bort din anmälan?")) return; trainings[ti].drivers=trainings[ti].drivers.filter(d=>d.name!==user); save(); render();}
 
 // ---------- RENDER ----------
+// ...allt ovanför render() är samma som tidigare
+
 function render(){
   const div=document.getElementById("trainings"); if(!div) return;
   div.innerHTML="";
@@ -119,8 +121,8 @@ function render(){
     const isPast = tEndDate<now;
     const bgColor = isPast ? "#ddd" : "#e9f5ee";
 
-    // ---------- Barn (tabell med direktredigering)
-    let kidsHTML = `<table><tr><th>Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Ta bort</th></tr>`;
+    // ---------- Barn (större namn)
+    let kidsHTML = `<table style="table-layout:fixed;"><tr><th style="width:200px;">Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Ta bort</th></tr>`;
     t.kids.forEach((k,ki)=>{
       const driveChecked = k.needDrive?"checked":"";
       const pickupChecked = k.needPickup?"checked":"";
@@ -131,7 +133,7 @@ function render(){
       const colorClass = missing ? "label-red" : "label-green";
 
       kidsHTML += `<tr style="background:${missing?'#ffe6e6':'#e6ffe6'};">
-        <td><input type="text" value="${k.name}" class="${colorClass}" style="width:100%" onblur="updateKidName(${ti},${ki},this)"></td>
+        <td><input type="text" value="${k.name}" class="${colorClass}" style="width:100%; font-weight:bold;" onblur="updateKidName(${ti},${ki},this)"></td>
         <td><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
         <td><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
         <td><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}></td>
@@ -142,7 +144,7 @@ function render(){
     kidsHTML += `</table><button onclick="addKidRow(${ti})">➕ Lägg till barn</button>`;
 
     // ---------- Föräldrar (tabell)
-    let driversHTML = `<table><tr><th>Förälder</th><th>Kan skjutsa</th><th>Kan hämta</th><th>Skjutsar</th><th>Hämtar</th></tr>`;
+    let driversHTML = `<table style="table-layout:fixed;"><tr><th>Förälder</th><th>Kan skjutsa</th><th>Kan hämta</th><th>Skjutsar</th><th>Hämtar</th></tr>`;
     t.drivers.forEach(d=>{
       const driveKids=Array.isArray(d.driveKids)?d.driveKids:[]; 
       const pickupKids=Array.isArray(d.pickupKids)?d.pickupKids:[]; 
@@ -156,6 +158,7 @@ function render(){
     });
     driversHTML += `</table>`;
     
+    // ---------- Render med föräldrar vänster, barn höger
     div.innerHTML += `<div class="training" style="background:${bgColor}">
       <div class="training-header">
         <span class="training-time">${t.date} ${t.startTime}-${t.endTime}</span>
@@ -167,17 +170,17 @@ function render(){
       <div>📍 ${t.place}</div>
       <div class="sections">
         <div class="section">
-          <h3>⚽ Barn</h3>
-          ${kidsHTML}
-        </div>
-        <div class="section">
           <h3>🚗 Föräldrar</h3>
-          ${driversHTML}
+          ${driversHTML || "Ingen anmäld"}
           ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
           <div style="margin-top:5px;">
             <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label><br>
             <label><input type="checkbox" ${me?.canPickup?"checked":""} onclick="toggleDriverAbility(${ti},'pickup')"> Jag kan hämta</label>
           </div>
+        </div>
+        <div class="section">
+          <h3>⚽ Barn</h3>
+          ${kidsHTML}
         </div>
       </div>
     </div>`;
