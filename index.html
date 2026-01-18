@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>Fotbollsskjuts</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  font-family: Arial;
+  background: #f2f2f2;
+  padding: 10px;
+}
+
+.container {
+  max-width: 500px;
+  background: white;
+  margin: auto;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+h1, h2 {
+  text-align: center;
+}
+
+input, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+}
+
+button {
+  background: #2e8b57;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+
+.training {
+  background: #e9f5ee;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 5px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>⚽ Fotbollsskjuts</h1>
+
+  <div id="login">
+    <input id="username" placeholder="Ditt namn">
+    <button onclick="login()">Logga in</button>
+  </div>
+
+  <div id="app" style="display:none">
+    <h2>Lägg till träning</h2>
+    <input id="date" type="date">
+    <input id="time" type="time">
+    <input id="place" placeholder="Plats">
+    <button onclick="addTraining()">Lägg till</button>
+
+    <h2>Träningar</h2>
+    <div id="trainings"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
