@@ -5,46 +5,15 @@
 <title>Fotbollsskjuts</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-  font-family: Arial;
-  background: #f2f2f2;
-  padding: 10px;
-}
-.container {
-  max-width: 600px;
-  background: white;
-  margin: auto;
-  padding: 15px;
-  border-radius: 10px;
-}
-h1, h2 {
-  text-align: center;
-}
-input, button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 5px;
-  box-sizing: border-box;
-}
-button {
-  background: #2e8b57;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-button:hover {
-  background: #246b45;
-}
-.training {
-  background: #e9f5ee;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 5px;
-}
-label {
-  margin-right: 10px;
-}
+body { font-family: Arial; background: #f2f2f2; padding: 10px; }
+.container { max-width: 600px; background: white; margin: auto; padding: 15px; border-radius: 10px; }
+h1,h2{text-align:center;}
+input,button,select { width: 100%; padding: 10px; margin-top:5px; box-sizing:border-box; }
+button { background:#2e8b57; color:white; border:none; border-radius:5px; cursor:pointer; }
+button:hover { background:#246b45; }
+.training { background:#e9f5ee; padding:10px; margin-top:10px; border-radius:5px; }
+label { margin-right:10px; }
+.time-select { width:48%; display:inline-block; }
 </style>
 </head>
 <body>
@@ -60,7 +29,10 @@ label {
   <div id="app" style="display:none">
     <h2>Lägg till träning</h2>
     <input id="date" type="date">
-    <input id="time" type="time">
+    <div>
+      <select id="startTime" class="time-select"></select>
+      <select id="endTime" class="time-select"></select>
+    </div>
     <input id="place" placeholder="Plats">
     <button onclick="addTraining()">Lägg till träning</button>
 
@@ -70,5 +42,23 @@ label {
 </div>
 
 <script src="./app.js" defer></script>
+<script>
+// Fyll i start- och sluttid med timme + 15 min intervall
+function generateTimeOptions() {
+  const startSelect = document.getElementById('startTime');
+  const endSelect = document.getElementById('endTime');
+  const times = [];
+  for(let h=0; h<24; h++){
+    [0,15,30,45].forEach(m=>{
+      let hh = h.toString().padStart(2,'0');
+      let mm = m.toString().padStart(2,'0');
+      times.push(`${hh}:${mm}`);
+    });
+  }
+  startSelect.innerHTML = times.map(t=>`<option value="${t}">${t}</option>`).join('');
+  endSelect.innerHTML = times.map(t=>`<option value="${t}">${t}</option>`).join('');
+}
+generateTimeOptions();
+</script>
 </body>
 </html>
