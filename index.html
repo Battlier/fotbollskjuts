@@ -14,15 +14,22 @@ button { cursor:pointer; }
 .section { flex:1; min-width:250px; }
 table { width:100%; border-collapse:collapse; margin-top:5px; }
 table th, table td { border:1px solid #ccc; padding:4px; font-size:14px; text-align:center; }
+table th { background:#eee; font-weight:bold; border-bottom:2px solid #aaa; }
 input[type="text"] { width:100%; font-weight:bold; }
 .training { border:1px solid #aaa; border-radius:5px; margin-bottom:10px; padding:10px; }
-.training-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.training-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-weight:bold; }
+
+tr.success td { background:#e6ffe6; }   /* behov uppfyllda */
+tr.warning td { background:#ffe6e6; }   /* behov ej uppfyllda */
 
 @media (max-width: 768px) {
   .sections { flex-direction: column; }
   .section { width:100% !important; }
   table { font-size:13px; }
+  table th, table td { padding:6px; }
   button { padding:6px 8px; font-size:14px; }
+  .training-header { font-size:16px; }
+  h3 { font-size:16px; margin-bottom:5px; }
 }
 .copy-dialog {
   background:#fff; border:1px solid #aaa; padding:10px; position:fixed; top:20%; left:5%; width:90%; z-index:1000;
