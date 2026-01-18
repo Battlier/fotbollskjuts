@@ -35,22 +35,20 @@ function addTraining() {
   const endEl = document.getElementById("endTime");
   const placeEl = document.getElementById("place");
 
-  if (!dateEl || !startEl || !endEl || !placeEl) { alert("Formuläret laddades inte korrekt."); return; }
+  if (!dateEl || !startEl || !endEl || !placeEl) return alert("Formuläret laddades inte korrekt.");
 
   const date = dateEl.value;
   const startTime = startEl.value;
   const endTime = endEl.value;
   const place = placeEl.value.trim();
-  if(!date || !startTime || !endTime || !place) { alert("Fyll i alla fält"); return; }
-  if(startTime >= endTime){ alert("Sluttid måste vara senare än starttid."); return; }
+  if(!date || !startTime || !endTime || !place) return alert("Fyll i alla fält");
+  if(startTime >= endTime) return alert("Sluttid måste vara senare än starttid.");
 
-  // Kontrollera att det inte redan finns träning på samma dag och starttid
   const conflict = trainings.some(t=>t.date===date && t.startTime===startTime);
-  if(conflict){ alert("Det finns redan en träning med samma starttid."); return; }
+  if(conflict) return alert("Det finns redan en träning med samma starttid.");
 
   trainings.push({ date, startTime, endTime, place, drivers: [], kids: [] });
-  save();
-  render();
+  save(); render();
   dateEl.value=""; placeEl.value="";
 }
 
@@ -61,10 +59,10 @@ function editTraining(i) {
   const endTime = prompt("Sluttid:", t.endTime);
   const place = prompt("Plats:", t.place);
   if(!date || !startTime || !endTime || !place) return;
-  if(startTime >= endTime){ alert("Sluttid måste vara senare än starttid."); return; }
+  if(startTime >= endTime) return alert("Sluttid måste vara senare än starttid.");
 
   const conflict = trainings.some((x, idx)=>idx!==i && x.date===date && x.startTime===startTime);
-  if(conflict){ alert("Det finns redan en träning med samma starttid."); return; }
+  if(conflict) return alert("Det finns redan en träning med samma starttid.");
 
   t.date = date; t.startTime = startTime; t.endTime = endTime; t.place = place;
   save(); render();
@@ -74,12 +72,8 @@ function deleteTraining(i) { if(!confirm("Ta bort denna träning?")) return; tra
 
 function removePastTrainings(){
   const now = new Date();
-  trainings = trainings.filter(t=>{
-    const tDate = new Date(t.date+"T"+t.endTime+":00");
-    return tDate >= now;
-  });
-  save();
-  render();
+  trainings = trainings.filter(t=>new Date(t.date+"T"+t.endTime+":00") >= now);
+  save(); render();
 }
 
 // ---------- BARN ----------
@@ -116,50 +110,69 @@ function render(){
     const tEndDate = new Date(t.date+"T"+t.endTime+":00");
     const isPast = tEndDate<now;
 
-    let kidsHTML="";
-    t.kids.forEach((k,ki)=>{
+    const bgColor = isPast ? "#ddd" : "#e9f5ee";
+
+    // Alla barn
+    let kidsHTML = t.kids.map((k,ki)=>{
       const driveChecked=k.needDrive?"checked":"";
       const pickupChecked=k.needPickup?"checked":"";
       const myDriveChecked=me?.driveKids?.includes(k.name)?"checked":"";
       const myPickupChecked=me?.pickupKids?.includes(k.name)?"checked":"";
 
-      // Färgkodning per barn: röd om saknar skjuts/hämtning, grön annars
-      let missing = false;
-      t.drivers.forEach(d=>{
-        if((k.needDrive && !d.driveKids.includes(k.name)) || (k.needPickup && !d.pickupKids.includes(k.name))) missing=true;
-      });
+      // Färgkodning röd/grön: röd om ingen skjuts/hämtning
+      const missing = t.drivers.every(d=> (k.needDrive && !d.driveKids.includes(k.name)) || (k.needPickup && !d.pickupKids.includes(k.name)));
       const colorClass = missing ? "label-red" : "label-green";
 
-      kidsHTML+=`⚽ <strong class="${colorClass}">${k.name}</strong><br>
-        Behöver: <label><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"> Skjuts</label>
+      return `<div style="margin-bottom:5px;">
+        <strong class="${colorClass}">${k.name}</strong><br>
+        Behöver: 
+        <label><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"> Skjuts</label>
         <label><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"> Hämtning</label><br>
-        Du: <label><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}> Skjutsa</label>
+        Du: 
+        <label><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}> Skjutsa</label>
         <label><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup?"disabled":""}> Hämta</label>
         <br><button onclick="editKid(${ti},${ki})">✏️</button>
-        <button onclick="deleteKid(${ti},${ki})">🗑️</button><br><br>`;
-    });
+        <button onclick="deleteKid(${ti},${ki})">🗑️</button>
+      </div>`;
+    }).join("");
 
-    // Föräldrar
-    let driversHTML="";
-    t.drivers.forEach(d=>{
+    // Alla föräldrar
+    let driversHTML = t.drivers.map(d=>{
       const driveKids=Array.isArray(d.driveKids)?d.driveKids:[]; 
       const pickupKids=Array.isArray(d.pickupKids)?d.pickupKids:[]; 
-      driversHTML+=`🚗 <strong>${d.name}</strong><br>Kan skjutsa: ${d.canDrive?"✅":"❌"} | Kan hämta: ${d.canPickup?"✅":"❌"}<br>Skjutsar: ${driveKids.join(", ")||"—"}<br>Hämtar: ${pickupKids.join(", ")||"—"}<br><br>`;
-    });
-
-    const bgColor = isPast ? "#ddd" : "#e9f5ee";
+      return `<div style="margin-bottom:5px;">
+        <strong>${d.name}</strong><br>
+        Kan skjutsa: ${d.canDrive?"✅":"❌"} | Kan hämta: ${d.canPickup?"✅":"❌"}<br>
+        Skjutsar: ${driveKids.join(", ")||"—"}<br>
+        Hämtar: ${pickupKids.join(", ")||"—"}
+      </div>`;
+    }).join("");
 
     div.innerHTML+=`<div class="training" style="background:${bgColor}">
-      <strong>${t.date} ${t.startTime}-${t.endTime}</strong><br>📍 ${t.place}<br><br>
-      <button onclick="editTraining(${ti})">✏️ Redigera träning</button>
-      <button onclick="deleteTraining(${ti})">🗑️ Ta bort träning</button><br><br>
-      <strong>🚗 Din tillgänglighet</strong><br>
-      <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label>
-      <label><input type="checkbox" ${me?.canPickup?"checked":""} onclick="toggleDriverAbility(${ti},'pickup')"> Jag kan hämta</label><br>
-      ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}<br><br>
-      <strong>🚗 Alla föräldrar</strong><br>${driversHTML || "Ingen anmäld än"}<br>
-      <strong>⚽ Barn</strong><br>${kidsHTML || "Inga barn inlagda än"}<br>
-      <button onclick="addKid(${ti})">➕ Lägg till barn</button>
+      <div class="training-header">
+        <span class="training-time">${t.date} ${t.startTime}-${t.endTime}</span>
+        <span>
+          <button onclick="editTraining(${ti})">✏️</button>
+          <button onclick="deleteTraining(${ti})">🗑️</button>
+        </span>
+      </div>
+      <div>📍 ${t.place}</div>
+      <div class="sections">
+        <div class="section">
+          <h3>⚽ Barn</h3>
+          ${kidsHTML || "Inga barn inlagda"}
+          <button onclick="addKid(${ti})">➕ Lägg till barn</button>
+        </div>
+        <div class="section">
+          <h3>🚗 Föräldrar</h3>
+          ${driversHTML || "Ingen anmäld"}
+          ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
+          <div style="margin-top:5px;">
+            <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label><br>
+            <label><input type="checkbox" ${me?.canPickup?"checked":""} onclick="toggleDriverAbility(${ti},'pickup')"> Jag kan hämta</label>
+          </div>
+        </div>
+      </div>
     </div>`;
   });
 }
