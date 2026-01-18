@@ -10,7 +10,7 @@ trainings.forEach(t => {
     d.canPickup = d.canPickup || false;
     d.driveKids = d.driveKids || [];
     d.pickupKids = d.pickupKids || [];
-    d.seats = d.seats || 4; // Default 4 platser
+    d.seats = d.seats || 4; // default 4
   });
   t.kids.forEach(k => {
     k.needDrive = k.needDrive !== false;
@@ -51,24 +51,6 @@ function addTraining() {
   document.getElementById("place").value = "";
 }
 
-function editTrainingInline(i){
-  const t = trainings[i];
-  const newDate = prompt("Datum:", t.date);
-  if(!newDate) return;
-  const newStart = prompt("Starttid:", t.startTime);
-  if(!newStart) return;
-  const newEnd = prompt("Sluttid:", t.endTime);
-  if(!newEnd) return;
-  const newPlace = prompt("Plats:", t.place);
-  if(!newPlace) return;
-  t.date = newDate;
-  t.startTime = newStart;
-  t.endTime = newEnd;
-  t.place = newPlace;
-  save();
-  render();
-}
-
 function deleteTraining(i) {
   if(!confirm("Ta bort denna träning?")) return;
   trainings.splice(i,1);
@@ -82,6 +64,44 @@ function removePastTrainings(){
     return tEnd >= now;
   });
   save(); render();
+}
+
+// ---------- EDIT MODAL ----------
+let editingIndex = null;
+
+function editTrainingInline(i){
+  editingIndex = i;
+  const t = trainings[i];
+  document.getElementById("editDate").value = t.date;
+  document.getElementById("editStart").value = t.startTime;
+  document.getElementById("editEnd").value = t.endTime;
+  document.getElementById("editPlace").value = t.place;
+  document.getElementById("editModal").style.display = "block";
+}
+
+function closeEditModal(){
+  editingIndex = null;
+  document.getElementById("editModal").style.display = "none";
+}
+
+document.getElementById("saveEditBtn").onclick = function(){
+  if(editingIndex === null) return;
+  const t = trainings[editingIndex];
+  const newDate = document.getElementById("editDate").value;
+  const newStart = document.getElementById("editStart").value;
+  const newEnd = document.getElementById("editEnd").value;
+  const newPlace = document.getElementById("editPlace").value.trim();
+  if(!newDate || !newStart || !newEnd || !newPlace) return alert("Fyll i alla fält");
+  if(newStart >= newEnd) return alert("Sluttid måste vara senare än starttid.");
+  const conflict = trainings.some((tt,idx)=>tt.date===newDate && tt.startTime===newStart && idx!==editingIndex);
+  if(conflict) return alert("Det finns redan en träning med samma starttid.");
+  t.date = newDate;
+  t.startTime = newStart;
+  t.endTime = newEnd;
+  t.place = newPlace;
+  save();
+  closeEditModal();
+  render();
 }
 
 // ---------- BARN ----------
@@ -210,14 +230,12 @@ function render(){
     return a.startTime.localeCompare(b.startTime);
   });
   const now = new Date();
-  let firstTodayIndex = -1;
 
   trainings.forEach((t,ti)=>{
     const me = t.drivers.find(d=>d.name===user);
     const tEndDate = new Date(t.date+"T"+t.endTime+":00");
     const isPast = tEndDate<now;
     const today = t.date === now.toISOString().slice(0,10);
-    if(today && firstTodayIndex===-1) firstTodayIndex=ti;
     const bgColor = isPast ? "#ddd" : (today?"#ffffcc":"#e9f5ee");
 
     // ---------- Barn
@@ -295,9 +313,4 @@ ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${me?.seats===n?'selected':''}>
 <div class="section"><h3>⚽ Barn</h3>${kidsHTML}</div>
 </div></div>`;
   });
-
-  if(firstTodayIndex!==-1){
-    const el = document.getElementById(`training-${firstTodayIndex}`);
-    if(el) el.scrollIntoView({behavior:"smooth", block:"center"});
-  }
 }
