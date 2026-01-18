@@ -134,14 +134,14 @@ function toggleDriverAbility(ti,type){ const d=getDriver(ti); if(type==="drive")
 function toggleAssignKid(ti,kidName,type){
   const d=getDriver(ti); 
   let list=type==="drive"? (d.driveKids||[]) : (d.pickupKids||[]); 
-  // --- Kontroll: ingen annan får bocka samma barn ---
+  // --- Kontroll: endast andra föräldrar blockeras ---
   const otherAssigned = trainings[ti].drivers.some(dr=>{
     if(dr.name===d.name) return false;
     if(type==="drive") return dr.driveKids.includes(kidName);
     else return dr.pickupKids.includes(kidName);
   });
   if(list.includes(kidName)){
-    list=list.filter(x=>x!==kidName);
+    list=list.filter(x=>x!==kidName); // alltid tillåtet att bocka ur
   }else{
     if(otherAssigned){ alert("Barnet har redan sin transport täckt av annan förälder."); return; }
     list.push(kidName);
@@ -174,50 +174,59 @@ function render(){
     const bgColor = isPast ? "#ddd" : (today?"#ffffcc":"#e9f5ee");
 
     // ---------- Barn
-    let kidsHTML = `<table style="table-layout:fixed;"><tr><th style="width:200px;">Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Ta bort</th></tr>`;
+    let kidsHTML = `<table style="table-layout:fixed; width:100%; border-collapse:collapse;"><tr>
+      <th style="width:200px;">Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th>
+      <th>Du skjutsar</th><th>Du hämtar</th><th>Ta bort</th></tr>`;
+
     t.kids.forEach((k,ki)=>{
-      // --- Kontrollera om behov uppfyllt ---
       const driveCovered = t.drivers.some(d=>d.driveKids?.includes(k.name));
       const pickupCovered = t.drivers.some(d=>d.pickupKids?.includes(k.name));
+
       const driveChecked = k.needDrive?"checked":"";
       const pickupChecked = k.needPickup?"checked":"";
 
       const myDriveChecked = me?.driveKids?.includes(k.name)?"checked":"";
       const myPickupChecked = me?.pickupKids?.includes(k.name)?"checked":"";
 
-      // Grön om behov uppfyllt
       const driveOk = !k.needDrive || driveCovered;
       const pickupOk = !k.needPickup || pickupCovered;
       const colorClass = (driveOk && pickupOk) ? "label-green" : "label-red";
 
+      const driveDisabled = me ? false : driveCovered;
+      const pickupDisabled = me ? false : pickupCovered;
+
       kidsHTML += `<tr style="background:${colorClass==='label-green'?'#e6ffe6':'#ffe6e6'};">
         <td><input type="text" value="${k.name}" class="${colorClass}" style="width:100%; font-weight:bold;" onblur="updateKidName(${ti},${ki},this)"></td>
-        <td><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
-        <td><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
-        <td><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive||driveCovered?"disabled":""}></td>
-        <td><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup||pickupCovered?"disabled":""}></td>
-        <td><button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
+        <td style="text-align:center"><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
+        <td style="text-align:center"><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
+        <td style="text-align:center"><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive||driveDisabled?"disabled":""}></td>
+        <td style="text-align:center"><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup||pickupDisabled?"disabled":""}></td>
+        <td style="text-align:center"><button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
       </tr>`;
     });
+
     kidsHTML += `</table><button onclick="addKidRow(${ti})">➕ Lägg till barn</button>`;
 
     // ---------- Föräldrar
-    let driversHTML = `<table style="table-layout:fixed;"><tr><th>Förälder</th><th>Kan skjutsa</th><th>Kan hämta</th><th>Skjutsar</th><th>Hämtar</th></tr>`;
+    let driversHTML = `<table style="table-layout:fixed; width:100%; border-collapse:collapse;"><tr>
+      <th>Förälder</th><th>Kan skjutsa</th><th>Kan hämta</th><th>Skjutsar</th><th>Hämtar</th></tr>`;
+
     t.drivers.forEach(d=>{
       const driveKids=Array.isArray(d.driveKids)?d.driveKids:[]; 
       const pickupKids=Array.isArray(d.pickupKids)?d.pickupKids:[]; 
       driversHTML += `<tr>
         <td>${d.name}</td>
-        <td>${d.canDrive?"✅":"❌"}</td>
-        <td>${d.canPickup?"✅":"❌"}</td>
+        <td style="text-align:center">${d.canDrive?"✅":"❌"}</td>
+        <td style="text-align:center">${d.canPickup?"✅":"❌"}</td>
         <td>${driveKids.join(", ")||"—"}</td>
         <td>${pickupKids.join(", ")||"—"}</td>
       </tr>`;
     });
+
     driversHTML += `</table>`;
-    
+
     // ---------- Render med föräldrar vänster, barn höger
-    div.innerHTML += `<div class="training" id="training-${ti}" style="background:${bgColor}">
+    div.innerHTML += `<div class="training" id="training-${ti}" style="background:${bgColor}; padding:10px; margin-bottom:10px;">
       <div class="training-header">
         <span class="training-time">${t.date} ${t.startTime}-${t.endTime}</span>
         <span>
@@ -226,8 +235,8 @@ function render(){
         </span>
       </div>
       <div>📍 ${t.place}</div>
-      <div class="sections">
-        <div class="section">
+      <div class="sections" style="display:flex; gap:20px;">
+        <div class="section" style="flex:1">
           <h3>🚗 Föräldrar</h3>
           ${driversHTML || "Ingen anmäld"}
           ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
@@ -236,7 +245,7 @@ function render(){
             <label><input type="checkbox" ${me?.canPickup?"checked":""} onclick="toggleDriverAbility(${ti},'pickup')"> Jag kan hämta</label>
           </div>
         </div>
-        <div class="section">
+        <div class="section" style="flex:1">
           <h3>⚽ Barn</h3>
           ${kidsHTML}
         </div>
