@@ -1,18 +1,16 @@
 let user = "";
 let trainings = JSON.parse(localStorage.getItem("trainings")) || [];
 
-// -------- DATA-FIX FÖR GAMLA POSTER ----------
+// ---------- Säkerställ bakåtkompatibilitet ----------
 trainings.forEach(t => {
   t.drivers = t.drivers || [];
   t.kids = t.kids || [];
-
   t.drivers.forEach(d => {
     d.canDrive = d.canDrive || false;
     d.canPickup = d.canPickup || false;
     d.driveKids = d.driveKids || [];
     d.pickupKids = d.pickupKids || [];
   });
-
   t.kids.forEach(k => {
     k.needDrive = k.needDrive !== false;
     k.needPickup = k.needPickup !== false;
@@ -32,8 +30,7 @@ function login() {
   render();
 }
 
-// ---------------- TRÄNING ----------------
-
+// ---------- TRÄNING ----------
 function addTraining() {
   const dateEl = document.getElementById("date");
   const timeEl = document.getElementById("time");
@@ -53,14 +50,15 @@ function addTraining() {
     return;
   }
 
-  trainings.push({
+  const newTraining = {
     date,
     time,
     place,
     drivers: [],
     kids: []
-  });
+  };
 
+  trainings.push(newTraining);
   save();
   render();
 
@@ -74,9 +72,7 @@ function editTraining(i) {
   const date = prompt("Datum:", t.date);
   const time = prompt("Tid:", t.time);
   const place = prompt("Plats:", t.place);
-
   if (!date || !time || !place) return;
-
   t.date = date;
   t.time = time;
   t.place = place;
@@ -91,8 +87,7 @@ function deleteTraining(i) {
   render();
 }
 
-// ---------------- BARN ----------------
-
+// ---------- BARN ----------
 function addKid(ti) {
   const name = prompt("Barnets namn:");
   if (!name) return;
@@ -111,7 +106,6 @@ function editKid(ti, ki) {
   const kid = trainings[ti].kids[ki];
   const name = prompt("Barnets namn:", kid.name);
   if (!name) return;
-
   kid.name = name;
   save();
   render();
@@ -119,14 +113,11 @@ function editKid(ti, ki) {
 
 function deleteKid(ti, ki) {
   if (!confirm("Ta bort detta barn?")) return;
-
   const kidName = trainings[ti].kids[ki].name;
-
   trainings[ti].drivers.forEach(d => {
     d.driveKids = (d.driveKids || []).filter(k => k !== kidName);
     d.pickupKids = (d.pickupKids || []).filter(k => k !== kidName);
   });
-
   trainings[ti].kids.splice(ki, 1);
   save();
   render();
@@ -140,8 +131,7 @@ function toggleKidNeed(ti, ki, type) {
   render();
 }
 
-// ---------------- FÖRÄLDER ----------------
-
+// ---------- FÖRÄLDER ----------
 function getDriver(ti) {
   let d = trainings[ti].drivers.find(x => x.name === user);
   if (!d) {
@@ -159,32 +149,21 @@ function getDriver(ti) {
 
 function toggleDriverAbility(ti, type) {
   const d = getDriver(ti);
-
   if (type === "drive") d.canDrive = !d.canDrive;
   if (type === "pickup") d.canPickup = !d.canPickup;
-
   if (!d.canDrive) d.driveKids = [];
   if (!d.canPickup) d.pickupKids = [];
-
   save();
   render();
 }
 
 function toggleAssignKid(ti, kidName, type) {
   const d = getDriver(ti);
-  let list = type === "drive" ? d.driveKids : d.pickupKids;
-
-  list = list || [];
-
-  if (list.includes(kidName)) {
-    list = list.filter(k => k !== kidName);
-  } else {
-    list.push(kidName);
-  }
-
+  let list = type === "drive" ? (d.driveKids || []) : (d.pickupKids || []);
+  if (list.includes(kidName)) list = list.filter(k => k !== kidName);
+  else list.push(kidName);
   if (type === "drive") d.driveKids = list;
   else d.pickupKids = list;
-
   save();
   render();
 }
@@ -196,8 +175,7 @@ function removeDriver(ti) {
   render();
 }
 
-// ---------------- VISNING ----------------
-
+// ---------- RENDER ----------
 function render() {
   const div = document.getElementById("trainings");
   if (!div) return;
@@ -207,57 +185,40 @@ function render() {
   trainings.forEach((t, ti) => {
     const me = t.drivers.find(d => d.name === user);
 
+    // ---- Föräldrar ----
     let driversHTML = "";
     t.drivers.forEach(d => {
+      const driveKids = Array.isArray(d.driveKids) ? d.driveKids : [];
+      const pickupKids = Array.isArray(d.pickupKids) ? d.pickupKids : [];
       driversHTML += `
         🚗 <strong>${d.name}</strong><br>
         Kan skjutsa: ${d.canDrive ? "✅" : "❌"} |
         Kan hämta: ${d.canPickup ? "✅" : "❌"}<br>
-        Skjutsar: ${(d.driveKids || []).join(", ") || "—"}<br>
-        Hämtar: ${(d.pickupKids || []).join(", ") || "—"}<br><br>
+        Skjutsar: ${driveKids.join(", ") || "—"}<br>
+        Hämtar: ${pickupKids.join(", ") || "—"}<br><br>
       `;
     });
 
+    // ---- Barn ----
     let kidsHTML = "";
     t.kids.forEach((k, ki) => {
       const driveChecked = k.needDrive ? "checked" : "";
       const pickupChecked = k.needPickup ? "checked" : "";
-
       const myDriveChecked = me?.driveKids?.includes(k.name) ? "checked" : "";
       const myPickupChecked = me?.pickupKids?.includes(k.name) ? "checked" : "";
 
       kidsHTML += `
         ⚽ <strong>${k.name}</strong><br>
         Behöver:
-        <label>
-          <input type="checkbox" ${driveChecked}
-            onclick="toggleKidNeed(${ti}, ${ki}, 'drive')">
-          Skjuts
-        </label>
-        <label>
-          <input type="checkbox" ${pickupChecked}
-            onclick="toggleKidNeed(${ti}, ${ki}, 'pickup')">
-          Hämtning
-        </label>
+        <label><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"> Skjuts</label>
+        <label><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"> Hämtning</label>
         <br>
-
         Du:
-        <label>
-          <input type="checkbox" ${myDriveChecked}
-            onclick="toggleAssignKid(${ti}, '${k.name}', 'drive')"
-            ${!me?.canDrive ? "disabled" : ""}>
-          Skjutsa
-        </label>
-        <label>
-          <input type="checkbox" ${myPickupChecked}
-            onclick="toggleAssignKid(${ti}, '${k.name}', 'pickup')"
-            ${!me?.canPickup ? "disabled" : ""}>
-          Hämta
-        </label>
-
+        <label><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}> Skjutsa</label>
+        <label><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup?"disabled":""}> Hämta</label>
         <br>
-        <button onclick="editKid(${ti}, ${ki})">✏️</button>
-        <button onclick="deleteKid(${ti}, ${ki})">🗑️</button>
+        <button onclick="editKid(${ti},${ki})">✏️</button>
+        <button onclick="deleteKid(${ti},${ki})">🗑️</button>
         <br><br>
       `;
     });
@@ -272,19 +233,10 @@ function render() {
 
         <br><br>
         <strong>🚗 Din tillgänglighet</strong><br>
-        <label>
-          <input type="checkbox" ${me?.canDrive ? "checked" : ""}
-            onclick="toggleDriverAbility(${ti}, 'drive')">
-          Jag kan skjutsa
-        </label>
-        <label>
-          <input type="checkbox" ${me?.canPickup ? "checked" : ""}
-            onclick="toggleDriverAbility(${ti}, 'pickup')">
-          Jag kan hämta
-        </label>
-
+        <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label>
+        <label><input type="checkbox" ${me?.canPickup?"checked":""} onclick="toggleDriverAbility(${ti},'pickup')"> Jag kan hämta</label>
         <br>
-        ${me ? `<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>` : ""}
+        ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
         <br><br>
 
         <strong>🚗 Alla föräldrar</strong><br>
@@ -292,7 +244,6 @@ function render() {
 
         <strong>⚽ Barn</strong><br>
         ${kidsHTML || "Inga barn inlagda än"}<br>
-
         <button onclick="addKid(${ti})">➕ Lägg till barn</button>
       </div>
     `;
