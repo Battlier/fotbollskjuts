@@ -280,4 +280,31 @@ function render(){
       </div>
       <div>📍 ${t.place}</div>
       <div class="sections" style="display:flex; gap:20px;">
-       
+        <div class="section" style="flex:1">
+          <h3>🚗 Föräldrar</h3>
+          ${driversHTML || "Ingen anmäld"}
+          ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
+          <div style="margin-top:5px;">
+            <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label><br>
+            <label><input type="checkbox" ${me?.canPickup?"checked":""} onclick="toggleDriverAbility(${ti},'pickup')"> Jag kan hämta</label><br>
+            <label>Lediga platser:
+              <select id="seats${ti}" onchange="updateSeats(${ti})">
+                ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${me?.seats===n?'selected':''}>${n}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="section" style="flex:1">
+          <h3>⚽ Barn</h3>
+          ${kidsHTML}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Scrolla till första dagens träning
+  if(firstTodayIndex!==-1){
+    const el = document.getElementById(`training-${firstTodayIndex}`);
+    if(el) el.scrollIntoView({behavior:"smooth", block:"center"});
+  }
+}
