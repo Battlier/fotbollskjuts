@@ -109,46 +109,46 @@ function render(){
     const me=t.drivers.find(d=>d.name===user);
     const tEndDate = new Date(t.date+"T"+t.endTime+":00");
     const isPast = tEndDate<now;
-
     const bgColor = isPast ? "#ddd" : "#e9f5ee";
 
-    // Alla barn
-    let kidsHTML = t.kids.map((k,ki)=>{
-      const driveChecked=k.needDrive?"checked":"";
-      const pickupChecked=k.needPickup?"checked":"";
-      const myDriveChecked=me?.driveKids?.includes(k.name)?"checked":"";
-      const myPickupChecked=me?.pickupKids?.includes(k.name)?"checked":"";
+    // ---------- Barn (tabell-liknande kompakt)
+    let kidsHTML = `<table><tr><th>Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Redigera</th></tr>`;
+    t.kids.forEach((k,ki)=>{
+      const driveChecked = k.needDrive?"checked":"";
+      const pickupChecked = k.needPickup?"checked":"";
+      const myDriveChecked = me?.driveKids?.includes(k.name)?"checked":"";
+      const myPickupChecked = me?.pickupKids?.includes(k.name)?"checked":"";
 
-      // Färgkodning röd/grön: röd om ingen skjuts/hämtning
-      const missing = t.drivers.every(d=> (k.needDrive && !d.driveKids.includes(k.name)) || (k.needPickup && !d.pickupKids.includes(k.name)));
+      const missing = t.drivers.every(d=>(k.needDrive && !d.driveKids.includes(k.name)) || (k.needPickup && !d.pickupKids.includes(k.name)));
       const colorClass = missing ? "label-red" : "label-green";
 
-      return `<div style="margin-bottom:5px;">
-        <strong class="${colorClass}">${k.name}</strong><br>
-        Behöver: 
-        <label><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"> Skjuts</label>
-        <label><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"> Hämtning</label><br>
-        Du: 
-        <label><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}> Skjutsa</label>
-        <label><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup?"disabled":""}> Hämta</label>
-        <br><button onclick="editKid(${ti},${ki})">✏️</button>
-        <button onclick="deleteKid(${ti},${ki})">🗑️</button>
-      </div>`;
-    }).join("");
+      kidsHTML += `<tr style="background:${missing?'#ffe6e6':'#e6ffe6'};">
+        <td><strong class="${colorClass}">${k.name}</strong></td>
+        <td><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
+        <td><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
+        <td><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}></td>
+        <td><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup?"disabled":""}></td>
+        <td><button onclick="editKid(${ti},${ki})">✏️</button> <button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
+      </tr>`;
+    });
+    kidsHTML += `</table>`;
 
-    // Alla föräldrar
-    let driversHTML = t.drivers.map(d=>{
+    // ---------- Föräldrar (tabell-liknande kompakt)
+    let driversHTML = `<table><tr><th>Förälder</th><th>Kan skjutsa</th><th>Kan hämta</th><th>Skjutsar</th><th>Hämtar</th></tr>`;
+    t.drivers.forEach(d=>{
       const driveKids=Array.isArray(d.driveKids)?d.driveKids:[]; 
       const pickupKids=Array.isArray(d.pickupKids)?d.pickupKids:[]; 
-      return `<div style="margin-bottom:5px;">
-        <strong>${d.name}</strong><br>
-        Kan skjutsa: ${d.canDrive?"✅":"❌"} | Kan hämta: ${d.canPickup?"✅":"❌"}<br>
-        Skjutsar: ${driveKids.join(", ")||"—"}<br>
-        Hämtar: ${pickupKids.join(", ")||"—"}
-      </div>`;
-    }).join("");
+      driversHTML += `<tr>
+        <td>${d.name}</td>
+        <td>${d.canDrive?"✅":"❌"}</td>
+        <td>${d.canPickup?"✅":"❌"}</td>
+        <td>${driveKids.join(", ")||"—"}</td>
+        <td>${pickupKids.join(", ")||"—"}</td>
+      </tr>`;
+    });
+    driversHTML += `</table>`;
 
-    div.innerHTML+=`<div class="training" style="background:${bgColor}">
+    div.innerHTML += `<div class="training" style="background:${bgColor}">
       <div class="training-header">
         <span class="training-time">${t.date} ${t.startTime}-${t.endTime}</span>
         <span>
