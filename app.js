@@ -19,36 +19,67 @@ function addTraining() {
   const time = document.getElementById("time").value;
   const place = document.getElementById("place").value;
 
+  if (!date || !time || !place) {
+    alert("Fyll i alla fält");
+    return;
+  }
+
   trainings.push({
     date,
     time,
     place,
-    drivers: [],
-    kids: []
+    drivers: [], // {name, type}
+    kids: []     // {name, need}
   });
 
   save();
   render();
 }
 
-function toggleDriver(i) {
-  const list = trainings[i].drivers;
-  if (list.includes(user)) {
-    trainings[i].drivers = list.filter(n => n !== user);
-  } else {
-    list.push(user);
+function setDriver(i) {
+  const type = prompt(
+    "Skriv:\nskjutsa\nhämta\nbåda",
+    "skjutsa"
+  );
+
+  if (!type) return;
+
+  const valid = ["skjutsa", "hämta", "båda"];
+  if (!valid.includes(type.toLowerCase())) {
+    alert("Skriv: skjutsa, hämta eller båda");
+    return;
   }
+
+  trainings[i].drivers = trainings[i].drivers.filter(d => d.name !== user);
+  trainings[i].drivers.push({
+    name: user,
+    type: type.toLowerCase()
+  });
+
   save();
   render();
 }
 
-function toggleKid(i) {
-  const list = trainings[i].kids;
-  if (list.includes(user)) {
-    trainings[i].kids = list.filter(n => n !== user);
-  } else {
-    list.push(user);
+function addKid(i) {
+  const name = prompt("Barnets namn:");
+  if (!name) return;
+
+  const need = prompt(
+    "Behöver barnet:\nskjuts\nhämtning\nbåda",
+    "skjuts"
+  );
+
+  const valid = ["skjuts", "hämtning", "båda"];
+  if (!valid.includes(need.toLowerCase())) {
+    alert("Skriv: skjuts, hämtning eller båda");
+    return;
   }
+
+  trainings[i].kids.push({
+    name,
+    need: need.toLowerCase()
+  });
+
   save();
   render();
 }
@@ -58,6 +89,14 @@ function render() {
   div.innerHTML = "";
 
   trainings.forEach((t, i) => {
+    const driversList = t.drivers
+      .map(d => `🚗 ${d.name} (${d.type})`)
+      .join("<br>") || "Ingen än";
+
+    const kidsList = t.kids
+      .map(k => `⚽ ${k.name} (${k.need})`)
+      .join("<br>") || "Inga än";
+
     const cars = t.drivers.length;
     const kids = t.kids.length;
 
@@ -66,17 +105,25 @@ function render() {
         <strong>${t.date} – ${t.time}</strong><br>
         📍 ${t.place}<br><br>
 
-        🚗 Skjutsar (${cars}):<br>
-        ${t.drivers.join(", ") || "Ingen än"}<br>
-        <button onclick="toggleDriver(${i})">Jag kan skjutsa/hämta</button>
+        <strong>🚗 Föräldrar</strong><br>
+        ${driversList}<br>
+        <button onclick="setDriver(${i})">
+          Jag kan skjutsa / hämta
+        </button>
 
         <br><br>
-        ⚽ Behöver skjuts (${kids}):<br>
-        ${t.kids.join(", ") || "Ingen än"}<br>
-        <button onclick="toggleKid(${i})">Mitt barn behöver skjuts</button>
+        <strong>⚽ Barn</strong><br>
+        ${kidsList}<br>
+        <button onclick="addKid(${i})">
+          Lägg till barn
+        </button>
 
         <br><br>
-        ${kids > cars ? "❗ Fler barn än bilar!" : "✅ Tillräckligt med bilar"}
+        ${
+          kids > cars
+            ? "❗ Fler barn än bilar"
+            : "✅ Tillräckligt med bilar"
+        }
       </div>
     `;
   });
