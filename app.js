@@ -1,6 +1,24 @@
 let user = "";
 let trainings = JSON.parse(localStorage.getItem("trainings")) || [];
 
+// -------- DATA-FIX FÖR GAMLA POSTER ----------
+trainings.forEach(t => {
+  t.drivers = t.drivers || [];
+  t.kids = t.kids || [];
+
+  t.drivers.forEach(d => {
+    d.canDrive = d.canDrive || false;
+    d.canPickup = d.canPickup || false;
+    d.driveKids = d.driveKids || [];
+    d.pickupKids = d.pickupKids || [];
+  });
+
+  t.kids.forEach(k => {
+    k.needDrive = k.needDrive !== false;
+    k.needPickup = k.needPickup !== false;
+  });
+});
+
 function save() {
   localStorage.setItem("trainings", JSON.stringify(trainings));
 }
@@ -22,7 +40,7 @@ function addTraining() {
   const placeEl = document.getElementById("place");
 
   if (!dateEl || !timeEl || !placeEl) {
-    alert("Formuläret kunde inte laddas. Ladda om sidan.");
+    alert("Formuläret laddades inte korrekt. Ladda om sidan.");
     return;
   }
 
@@ -75,11 +93,11 @@ function deleteTraining(i) {
 
 // ---------------- BARN ----------------
 
-function addKid(i) {
+function addKid(ti) {
   const name = prompt("Barnets namn:");
   if (!name) return;
 
-  trainings[i].kids.push({
+  trainings[ti].kids.push({
     name,
     needDrive: true,
     needPickup: true
@@ -105,8 +123,8 @@ function deleteKid(ti, ki) {
   const kidName = trainings[ti].kids[ki].name;
 
   trainings[ti].drivers.forEach(d => {
-    d.driveKids = d.driveKids.filter(k => k !== kidName);
-    d.pickupKids = d.pickupKids.filter(k => k !== kidName);
+    d.driveKids = (d.driveKids || []).filter(k => k !== kidName);
+    d.pickupKids = (d.pickupKids || []).filter(k => k !== kidName);
   });
 
   trainings[ti].kids.splice(ki, 1);
@@ -156,6 +174,8 @@ function toggleAssignKid(ti, kidName, type) {
   const d = getDriver(ti);
   let list = type === "drive" ? d.driveKids : d.pickupKids;
 
+  list = list || [];
+
   if (list.includes(kidName)) {
     list = list.filter(k => k !== kidName);
   } else {
@@ -180,6 +200,8 @@ function removeDriver(ti) {
 
 function render() {
   const div = document.getElementById("trainings");
+  if (!div) return;
+
   div.innerHTML = "";
 
   trainings.forEach((t, ti) => {
@@ -191,8 +213,8 @@ function render() {
         🚗 <strong>${d.name}</strong><br>
         Kan skjutsa: ${d.canDrive ? "✅" : "❌"} |
         Kan hämta: ${d.canPickup ? "✅" : "❌"}<br>
-        Skjutsar: ${d.driveKids.join(", ") || "—"}<br>
-        Hämtar: ${d.pickupKids.join(", ") || "—"}<br><br>
+        Skjutsar: ${(d.driveKids || []).join(", ") || "—"}<br>
+        Hämtar: ${(d.pickupKids || []).join(", ") || "—"}<br><br>
       `;
     });
 
@@ -201,8 +223,8 @@ function render() {
       const driveChecked = k.needDrive ? "checked" : "";
       const pickupChecked = k.needPickup ? "checked" : "";
 
-      const myDriveChecked = me?.driveKids.includes(k.name) ? "checked" : "";
-      const myPickupChecked = me?.pickupKids.includes(k.name) ? "checked" : "";
+      const myDriveChecked = me?.driveKids?.includes(k.name) ? "checked" : "";
+      const myPickupChecked = me?.pickupKids?.includes(k.name) ? "checked" : "";
 
       kidsHTML += `
         ⚽ <strong>${k.name}</strong><br>
@@ -276,4 +298,3 @@ function render() {
     `;
   });
 }
-
