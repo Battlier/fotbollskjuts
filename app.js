@@ -1,6 +1,7 @@
 let user = "";
 let trainings = JSON.parse(localStorage.getItem("trainings")) || [];
 
+// Initiera träningsobjekt om det saknas fält
 trainings.forEach(t => {
   t.drivers = t.drivers || [];
   t.kids = t.kids || [];
@@ -35,18 +36,73 @@ function reloadTrainings() {
 }
 
 // ---------- TRÄNING ----------
-function addTraining() { /* samma som tidigare */ }
-function editTrainingInline(i) { /* inline-edit */ }
-function generateEditTimeOptions(i, startValue, endValue){ /* samma */ }
-function saveEditTraining(i){ /* samma */ }
-function deleteTraining(i) { if(!confirm("Ta bort denna träning?")) return; trainings.splice(i,1); save(); render(); }
-function removePastTrainings(){ /* samma */ }
+function addTraining() {
+  const date = document.getElementById("date").value;
+  const startTime = document.getElementById("startTime").value;
+  const endTime = document.getElementById("endTime").value;
+  const place = document.getElementById("place").value.trim();
+  if(!date || !startTime || !endTime || !place) return alert("Fyll i alla fält");
+  if(startTime >= endTime) return alert("Sluttid måste vara senare än starttid.");
+  // Kontrollera konflikt med annan träning samma dag och tid
+  const conflict = trainings.some(t=>t.date===date && t.startTime===startTime);
+  if(conflict) return alert("Det finns redan en träning med samma starttid.");
+  trainings.push({ date, startTime, endTime, place, drivers: [], kids: [] });
+  save(); render();
+  document.getElementById("date").value = "";
+  document.getElementById("place").value = "";
+}
+
+function editTrainingInline(i){
+  const t = trainings[i];
+  const newDate = prompt("Datum:", t.date);
+  if(!newDate) return;
+  const newStart = prompt("Starttid:", t.startTime);
+  if(!newStart) return;
+  const newEnd = prompt("Sluttid:", t.endTime);
+  if(!newEnd) return;
+  const newPlace = prompt("Plats:", t.place);
+  if(!newPlace) return;
+  t.date = newDate;
+  t.startTime = newStart;
+  t.endTime = newEnd;
+  t.place = newPlace;
+  save();
+  render();
+}
+
+function deleteTraining(i) {
+  if(!confirm("Ta bort denna träning?")) return;
+  trainings.splice(i,1);
+  save(); render();
+}
+
+function removePastTrainings(){
+  const now = new Date();
+  trainings = trainings.filter(t=>{
+    const tEnd = new Date(t.date+"T"+t.endTime+":00");
+    return tEnd >= now;
+  });
+  save(); render();
+}
 
 // ---------- BARN ----------
-function addKidRow(ti){ trainings[ti].kids.push({name:"", needDrive:true, needPickup:true}); save(); render(); }
-function deleteKid(ti,ki){ /* samma */ }
-function toggleKidNeed(ti,ki,type){ /* samma */ }
-function updateKidName(ti,ki,el){ trainings[ti].kids[ki].name = el.value; save(); render(); }
+function addKidRow(ti){
+  trainings[ti].kids.push({name:"", needDrive:true, needPickup:true});
+  save(); render();
+}
+function deleteKid(ti,ki){
+  trainings[ti].kids.splice(ki,1); save(); render();
+}
+function toggleKidNeed(ti,ki,type){
+  const k = trainings[ti].kids[ki];
+  if(type==="drive") k.needDrive = !k.needDrive;
+  else k.needPickup = !k.needPickup;
+  save(); render();
+}
+function updateKidName(ti,ki,el){
+  trainings[ti].kids[ki].name = el.value;
+  save(); render();
+}
 
 // Kopiera barn från föregående träning
 function copyKidsFromPrev(ti){
@@ -72,11 +128,55 @@ function copyKidsFromPrev(ti){
 }
 
 // ---------- FÖRÄLDER ----------
-function getDriver(ti){ /* samma */ }
-function toggleDriverAbility(ti,type){ /* samma */ }
-function updateSeats(ti){ /* samma */ }
-function toggleAssignKid(ti,kidName,type){ /* med överbokningskontroll */ }
-function removeDriver(ti){ /* samma */ }
+function getDriver(ti){
+  let driver = trainings[ti].drivers.find(d=>d.name===user);
+  if(!driver){
+    driver = {name:user, canDrive:false, canPickup:false, driveKids:[], pickupKids:[], seats:1};
+    trainings[ti].drivers.push(driver);
+    save();
+  }
+  return driver;
+}
+function toggleDriverAbility(ti,type){
+  const d = getDriver(ti);
+  if(type==="drive") d.canDrive = !d.canDrive;
+  else d.canPickup = !d.canPickup;
+  save(); render();
+}
+function updateSeats(ti){
+  const d = getDriver(ti);
+  const sel = document.getElementById("seats"+ti);
+  d.seats = parseInt(sel.value);
+  save(); render();
+}
+function toggleAssignKid(ti,kidName,type){
+  const d = getDriver(ti);
+  let list = type==="drive"? d.driveKids : d.pickupKids;
+  // Kontrollera överbokning
+  let newCount = list.includes(kidName)? list.length-1 : list.length+1;
+  if(type==="drive" && newCount>d.seats){
+    alert("Du försöker boka fler barn än antal lediga platser!");
+    return;
+  }
+  // Kontrollera om annan förälder redan har samma barn
+  const otherAssigned = trainings[ti].drivers.some(dr=>{
+    if(dr.name===d.name) return false;
+    if(type==="drive") return dr.driveKids.includes(kidName);
+    else return dr.pickupKids.includes(kidName);
+  });
+  if(list.includes(kidName)) list = list.filter(x=>x!==kidName);
+  else{
+    if(otherAssigned){ alert("Barnet har redan sin transport täckt av annan förälder."); return; }
+    list.push(kidName);
+  }
+  if(type==="drive") d.driveKids=list; else d.pickupKids=list;
+  save(); render();
+}
+function removeDriver(ti){
+  const idx = trainings[ti].drivers.findIndex(d=>d.name===user);
+  if(idx!==-1) trainings[ti].drivers.splice(idx,1);
+  save(); render();
+}
 
 // ---------- RENDER ----------
 function render(){
@@ -92,7 +192,7 @@ function render(){
   let firstTodayIndex = -1;
 
   trainings.forEach((t,ti)=>{
-    const me=t.drivers.find(d=>d.name===user);
+    const me = t.drivers.find(d=>d.name===user);
     const tEndDate = new Date(t.date+"T"+t.endTime+":00");
     const isPast = tEndDate<now;
     const today = t.date === now.toISOString().slice(0,10);
@@ -109,20 +209,19 @@ function render(){
 <th style="width:100px; text-align:center;">Du hämtar</th>
 <th style="width:60px; text-align:center;">Ta bort</th>
 </tr>`;
-
     t.kids.forEach((k,ki)=>{
       const driveCovered = t.drivers.some(d=>d.driveKids?.includes(k.name));
       const pickupCovered = t.drivers.some(d=>d.pickupKids?.includes(k.name));
       const driveOk = !k.needDrive || driveCovered;
       const pickupOk = !k.needPickup || pickupCovered;
-      const colorClass = (driveOk && pickupOk) ? "label-green" : "label-red";
+      const color = (driveOk && pickupOk) ? "#e6ffe6" : "#ffe6e6";
       const meDriver = me || {};
       const myDriveChecked = meDriver.driveKids?.includes(k.name)?"checked":"";
       const myPickupChecked = meDriver.pickupKids?.includes(k.name)?"checked":"";
       const driveDisabled = me ? false : driveCovered;
       const pickupDisabled = me ? false : pickupCovered;
 
-      kidsHTML += `<tr style="background:${colorClass==='label-green'?'#e6ffe6':'#ffe6e6'};">
+      kidsHTML += `<tr style="background:${color};">
 <td><input type="text" value="${k.name}" style="width:100%; font-weight:bold;" onblur="updateKidName(${ti},${ki},this)"></td>
 <td style="text-align:center"><input type="checkbox" ${k.needDrive?"checked":""} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
 <td style="text-align:center"><input type="checkbox" ${k.needPickup?"checked":""} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
@@ -131,7 +230,6 @@ function render(){
 <td style="text-align:center"><button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
 </tr>`;
     });
-
     kidsHTML += `</table><button onclick="addKidRow(${ti})">➕ Lägg till barn</button>`;
     if(ti>0) kidsHTML += ` <button onclick="copyKidsFromPrev(${ti})">📋 Kopiera barn från föregående</button>`;
 
@@ -146,7 +244,8 @@ function render(){
 <td style="text-align:center">${d.canPickup?"✅":"❌"}</td>
 <td>${driveKids.join(", ")||"—"}</td>
 <td>${pickupKids.join(", ")||"—"}</td>
-<td style="text-align:center">${d.seats||1}</td></tr>`;
+<td style="text-align:center">${d.seats||1}</td>
+</tr>`;
     });
     driversHTML += `</table>`;
 
