@@ -19,8 +19,8 @@ input[type="text"] { width:100%; font-weight:bold; }
 .training { border:1px solid #aaa; border-radius:5px; margin-bottom:10px; padding:10px; }
 .training-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-weight:bold; }
 
-tr.success td { background:#e6ffe6; }   /* behov uppfyllda */
-tr.warning td { background:#ffe6e6; }   /* behov ej uppfyllda */
+tr.success td { background:#e6ffe6; }
+tr.warning td { background:#ffe6e6; }
 
 @media (max-width: 768px) {
   .sections { flex-direction: column; }
@@ -31,8 +31,8 @@ tr.warning td { background:#ffe6e6; }   /* behov ej uppfyllda */
   .training-header { font-size:16px; }
   h3 { font-size:16px; margin-bottom:5px; }
 }
-.copy-dialog {
-  background:#fff; border:1px solid #aaa; padding:10px; position:fixed; top:20%; left:5%; width:90%; z-index:1000;
+.copy-dialog, #editModal {
+  background:#fff; border:1px solid #aaa; padding:10px; position:fixed; top:20%; left:5%; width:90%; z-index:1000; border-radius:8px;
 }
 </style>
 </head>
@@ -58,16 +58,31 @@ tr.warning td { background:#ffe6e6; }   /* behov ej uppfyllda */
 <div id="trainings"></div>
 </div>
 
+<!-- Modal för edit träning -->
+<div id="editModal" style="display:none;">
+<h3>Editera träning</h3>
+<label>Datum: <input type="date" id="editDate"></label><br>
+<label>Start: <select id="editStart"></select></label><br>
+<label>Slut: <select id="editEnd"></select></label><br>
+<label>Plats: <input type="text" id="editPlace"></label><br>
+<button id="saveEditBtn">Spara</button>
+<button onclick="closeEditModal()">Avbryt</button>
+</div>
+
 <script src="app.js"></script>
 <script>
-// Initiera tidslistor med timme + 15-minutersupplösning
+// Initiera tidslistor för add och edit
 const startSel = document.getElementById("startTime");
 const endSel = document.getElementById("endTime");
+const editStart = document.getElementById("editStart");
+const editEnd = document.getElementById("editEnd");
 for(let h=6;h<=22;h++){
   for(let m=0;m<60;m+=15){
     const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     startSel.innerHTML += `<option value="${val}">${val}</option>`;
     endSel.innerHTML += `<option value="${val}">${val}</option>`;
+    editStart.innerHTML += `<option value="${val}">${val}</option>`;
+    editEnd.innerHTML += `<option value="${val}">${val}</option>`;
   }
 }
 </script>
