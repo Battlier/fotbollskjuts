@@ -2,64 +2,54 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Fotbollsskjuts</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fotbollskjuts</title>
 <style>
-body { font-family: Arial; background: #f2f2f2; padding: 10px; margin:0;}
-.container { max-width: 900px; background: white; margin: auto; padding: 15px; border-radius: 10px; }
-h1,h2{text-align:center; margin:10px 0;}
-input,button,select { padding: 8px; margin: 5px 0; box-sizing:border-box; }
-button { background:#2e8b57; color:white; border:none; border-radius:5px; cursor:pointer; }
-button:hover { background:#246b45; }
-.training { background:#e9f5ee; padding:15px; margin-top:15px; border-radius:10px; display:flex; flex-direction:column; gap:10px; }
-.training-header { display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; }
-.training-time { font-weight:bold; font-size:1.1em; }
-.sections { display:flex; flex-wrap:wrap; gap:20px; }
-.section { flex:1 1 300px; background:#f9f9f9; padding:10px; border-radius:8px; }
-.section h3 { margin-top:0; }
-.label-red { color:red; font-weight:bold; }
-.label-green { color:green; font-weight:bold; }
-.checkbox-group { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-.checkbox-group label { margin:0; }
-table { width:100%; border-collapse:collapse; }
-th, td { border:1px solid #ccc; padding:5px; text-align:center; }
-th { background:#eee; }
-@media(max-width:600px){ .sections { flex-direction: column; } }
+  body { font-family: Arial, sans-serif; margin:20px; background:#f0f0f0; }
+  h1,h2,h3 { margin:5px 0; }
+  input[type=text], input[type=date], select { padding:5px; }
+  button { padding:3px 6px; margin:2px; cursor:pointer; }
+  .training { border-radius:6px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+  .training-header { display:flex; justify-content:space-between; align-items:center; font-weight:bold; margin-bottom:5px; }
+  .sections { display:flex; gap:20px; margin-top:10px; }
+  .section h3 { margin:5px 0; }
+  table { width:100%; border-collapse:collapse; margin-bottom:5px; }
+  th,td { padding:3px; border:1px solid #ccc; text-align:left; }
+  th { background:#ddd; }
+  .label-green { background:#e6ffe6; }
+  .label-red { background:#ffe6e6; }
+  #app { display:none; }
+  #login { margin-bottom:20px; }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>⚽ Fotbollsskjuts</h1>
+<h1>Fotbollskjuts</h1>
 
-  <div id="login">
-    <input id="username" placeholder="Ditt namn">
-    <button onclick="login()">Logga in</button>
-  </div>
-
-  <div id="app" style="display:none">
-    <h2>Lägg till träning</h2>
-    <div class="checkbox-group">
-      <input id="date" type="date">
-      <select id="startTime"></select>
-      <select id="endTime"></select>
-      <input id="place" placeholder="Plats">
-    </div>
-    <div class="checkbox-group">
-      <button onclick="addTraining()">Lägg till träning</button>
-      <button onclick="removePastTrainings()">🗑️ Ta bort passerade träningar</button>
-    </div>
-
-    <h2>Träningar</h2>
-    <div id="trainings"></div>
-  </div>
+<div id="login">
+  <label>Namn: <input type="text" id="username"></label>
+  <button onclick="login()">Logga in</button>
 </div>
 
-<script src="./app.js" defer></script>
+<div id="app">
+  <h2>Lägg till träning</h2>
+  <label>Datum: <input type="date" id="date"></label>
+  <label>Start: <select id="startTime"></select></label>
+  <label>Slut: <select id="endTime"></select></label>
+  <label>Plats: <input type="text" id="place" placeholder="Plats"></label>
+  <button onclick="addTraining()">➕ Lägg till träning</button>
+  <button onclick="removePastTrainings()">Ta bort passerade träningar</button>
+
+  <h2>Träningar</h2>
+  <div id="trainings"></div>
+</div>
+
+<script src="app.js" defer></script>
 <script>
+// Generera tid-val med timme+15 min intervall
 function generateTimeOptions() {
-  const startSelect = document.getElementById('startTime');
-  const endSelect = document.getElementById('endTime');
+  const startSel = document.getElementById("startTime");
+  const endSel = document.getElementById("endTime");
   const times = [];
   for(let h=0; h<24; h++){
     [0,15,30,45].forEach(m=>{
@@ -68,10 +58,11 @@ function generateTimeOptions() {
       times.push(`${hh}:${mm}`);
     });
   }
-  startSelect.innerHTML = times.map(t=>`<option value="${t}">${t}</option>`).join('');
-  endSelect.innerHTML = times.map(t=>`<option value="${t}">${t}</option>`).join('');
+  if(startSel) startSel.innerHTML = times.map(t=>`<option value="${t}">${t}</option>`).join('');
+  if(endSel) endSel.innerHTML = times.map(t=>`<option value="${t}">${t}</option>`).join('');
 }
 generateTimeOptions();
 </script>
+
 </body>
 </html>
