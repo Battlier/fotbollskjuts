@@ -17,9 +17,18 @@ function login() {
 // ---------------- TRÄNING ----------------
 
 function addTraining() {
-  const date = document.getElementById("date").value;
-  const time = document.getElementById("time").value;
-  const place = document.getElementById("place").value;
+  const dateEl = document.getElementById("date");
+  const timeEl = document.getElementById("time");
+  const placeEl = document.getElementById("place");
+
+  if (!dateEl || !timeEl || !placeEl) {
+    alert("Formuläret kunde inte laddas. Ladda om sidan.");
+    return;
+  }
+
+  const date = dateEl.value;
+  const time = timeEl.value;
+  const place = placeEl.value;
 
   if (!date || !time || !place) {
     alert("Fyll i alla fält");
@@ -30,12 +39,16 @@ function addTraining() {
     date,
     time,
     place,
-    drivers: [], // {name, canDrive, canPickup, driveKids[], pickupKids[]}
-    kids: []     // {name, needDrive, needPickup}
+    drivers: [],
+    kids: []
   });
 
   save();
   render();
+
+  dateEl.value = "";
+  timeEl.value = "";
+  placeEl.value = "";
 }
 
 function editTraining(i) {
@@ -263,3 +276,4 @@ function render() {
     `;
   });
 }
+
