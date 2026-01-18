@@ -29,6 +29,12 @@ function login() {
   render();
 }
 
+// ---------- Reload ----------
+function reloadTrainings() {
+  trainings = JSON.parse(localStorage.getItem("trainings")) || [];
+  render();
+}
+
 // ---------- TRÄNING ----------
 function addTraining() {
   const dateEl = document.getElementById("date");
@@ -153,19 +159,30 @@ function updateSeats(ti){
   save(); render();
 }
 function toggleAssignKid(ti,kidName,type){
-  const d=getDriver(ti); 
-  let list=type==="drive"? (d.driveKids||[]) : (d.pickupKids||[]); 
+  const d = getDriver(ti); 
+  let list = type==="drive"? (d.driveKids||[]) : (d.pickupKids||[]); 
+
+  // Kontroll mot andra föräldrar
   const otherAssigned = trainings[ti].drivers.some(dr=>{
     if(dr.name===d.name) return false;
     if(type==="drive") return dr.driveKids.includes(kidName);
     else return dr.pickupKids.includes(kidName);
   });
+
+  // Kolla överbokning
+  let newCount = list.includes(kidName) ? list.length - 1 : list.length + 1;
+  if(type==="drive" && newCount > d.seats){
+    alert("Du försöker boka fler barn än antal lediga platser!");
+    return;
+  }
+
   if(list.includes(kidName)){
-    list=list.filter(x=>x!==kidName);
-  }else{
+    list = list.filter(x=>x!==kidName); // alltid tillåtet att bocka ur
+  } else {
     if(otherAssigned){ alert("Barnet har redan sin transport täckt av annan förälder."); return; }
     list.push(kidName);
   }
+
   if(type==="drive") d.driveKids=list; else d.pickupKids=list;
   save(); render();
 }
@@ -263,31 +280,4 @@ function render(){
       </div>
       <div>📍 ${t.place}</div>
       <div class="sections" style="display:flex; gap:20px;">
-        <div class="section" style="flex:1">
-          <h3>🚗 Föräldrar</h3>
-          ${driversHTML || "Ingen anmäld"}
-          ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
-          <div style="margin-top:5px;">
-            <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label><br>
-            <label><input type="checkbox" ${me?.canPickup?"checked":""} onclick="toggleDriverAbility(${ti},'pickup')"> Jag kan hämta</label><br>
-            <label>Lediga platser:
-              <select id="seats${ti}" onchange="updateSeats(${ti})">
-                ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${me?.seats===n?'selected':''}>${n}</option>`).join('')}
-              </select>
-            </label>
-          </div>
-        </div>
-        <div class="section" style="flex:1">
-          <h3>⚽ Barn</h3>
-          ${kidsHTML}
-        </div>
-      </div>
-    </div>`;
-  });
-
-  // Scrolla till första dagens träning
-  if(firstTodayIndex!==-1){
-    const el = document.getElementById(`training-${firstTodayIndex}`);
-    if(el) el.scrollIntoView({behavior:"smooth", block:"center"});
-  }
-}
+       
