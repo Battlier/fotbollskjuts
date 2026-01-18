@@ -52,19 +52,54 @@ function addTraining() {
   dateEl.value=""; placeEl.value="";
 }
 
-function editTraining(i) {
+function editTrainingInline(i) {
   const t = trainings[i];
-  const date = prompt("Datum:", t.date);
-  const startTime = prompt("Starttid:", t.startTime);
-  const endTime = prompt("Sluttid:", t.endTime);
-  const place = prompt("Plats:", t.place);
-  if(!date || !startTime || !endTime || !place) return;
-  if(startTime >= endTime) return alert("Sluttid måste vara senare än starttid.");
+  const container = document.getElementById(`training-${i}`);
+  if (!container) return;
 
+  // Byt ut display med inline-formulär
+  container.innerHTML = `
+    <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;">
+      <input type="date" id="editDate${i}" value="${t.date}">
+      <select id="editStart${i}"></select>
+      <select id="editEnd${i}"></select>
+      <input type="text" id="editPlace${i}" value="${t.place}" placeholder="Plats">
+      <button onclick="saveEditTraining(${i})">💾 Spara</button>
+      <button onclick="render()">❌ Avbryt</button>
+    </div>
+  `;
+  generateEditTimeOptions(i, t.startTime, t.endTime);
+}
+
+function generateEditTimeOptions(i, startValue, endValue){
+  const times = [];
+  for(let h=0; h<24; h++){
+    [0,15,30,45].forEach(m=>{
+      let hh = h.toString().padStart(2,'0');
+      let mm = m.toString().padStart(2,'0');
+      times.push(`${hh}:${mm}`);
+    });
+  }
+  const startSel = document.getElementById(`editStart${i}`);
+  const endSel = document.getElementById(`editEnd${i}`);
+  startSel.innerHTML = times.map(t=>`<option value="${t}" ${t===startValue?'selected':''}>${t}</option>`).join('');
+  endSel.innerHTML = times.map(t=>`<option value="${t}" ${t===endValue?'selected':''}>${t}</option>`).join('');
+}
+
+function saveEditTraining(i){
+  const date = document.getElementById(`editDate${i}`).value;
+  const startTime = document.getElementById(`editStart${i}`).value;
+  const endTime = document.getElementById(`editEnd${i}`).value;
+  const place = document.getElementById(`editPlace${i}`).value.trim();
+  if(!date || !startTime || !endTime || !place) return alert("Fyll i alla fält");
+  if(startTime >= endTime) return alert("Sluttid måste vara senare än starttid.");
   const conflict = trainings.some((x, idx)=>idx!==i && x.date===date && x.startTime===startTime);
   if(conflict) return alert("Det finns redan en träning med samma starttid.");
 
-  t.date = date; t.startTime = startTime; t.endTime = endTime; t.place = place;
+  trainings[i].date = date;
+  trainings[i].startTime = startTime;
+  trainings[i].endTime = endTime;
+  trainings[i].place = place;
   save(); render();
 }
 
@@ -101,8 +136,6 @@ function toggleAssignKid(ti,kidName,type){ const d=getDriver(ti); let list=type=
 function removeDriver(ti){ if(!confirm("Ta bort din anmälan?")) return; trainings[ti].drivers=trainings[ti].drivers.filter(d=>d.name!==user); save(); render();}
 
 // ---------- RENDER ----------
-// ...allt ovanför render() är samma som tidigare
-
 function render(){
   const div=document.getElementById("trainings"); if(!div) return;
   div.innerHTML="";
@@ -114,14 +147,17 @@ function render(){
   });
 
   const now = new Date();
+  let firstTodayIndex = -1;
 
   trainings.forEach((t,ti)=>{
     const me=t.drivers.find(d=>d.name===user);
     const tEndDate = new Date(t.date+"T"+t.endTime+":00");
     const isPast = tEndDate<now;
-    const bgColor = isPast ? "#ddd" : "#e9f5ee";
+    const today = t.date === now.toISOString().slice(0,10);
+    if(today && firstTodayIndex===-1) firstTodayIndex=ti;
+    const bgColor = isPast ? "#ddd" : (today?"#ffffcc":"#e9f5ee");
 
-    // ---------- Barn (större namn)
+    // ---------- Barn
     let kidsHTML = `<table style="table-layout:fixed;"><tr><th style="width:200px;">Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Ta bort</th></tr>`;
     t.kids.forEach((k,ki)=>{
       const driveChecked = k.needDrive?"checked":"";
@@ -143,7 +179,7 @@ function render(){
     });
     kidsHTML += `</table><button onclick="addKidRow(${ti})">➕ Lägg till barn</button>`;
 
-    // ---------- Föräldrar (tabell)
+    // ---------- Föräldrar
     let driversHTML = `<table style="table-layout:fixed;"><tr><th>Förälder</th><th>Kan skjutsa</th><th>Kan hämta</th><th>Skjutsar</th><th>Hämtar</th></tr>`;
     t.drivers.forEach(d=>{
       const driveKids=Array.isArray(d.driveKids)?d.driveKids:[]; 
@@ -159,11 +195,11 @@ function render(){
     driversHTML += `</table>`;
     
     // ---------- Render med föräldrar vänster, barn höger
-    div.innerHTML += `<div class="training" style="background:${bgColor}">
+    div.innerHTML += `<div class="training" id="training-${ti}" style="background:${bgColor}">
       <div class="training-header">
         <span class="training-time">${t.date} ${t.startTime}-${t.endTime}</span>
         <span>
-          <button onclick="editTraining(${ti})">✏️</button>
+          <button onclick="editTrainingInline(${ti})">✏️</button>
           <button onclick="deleteTraining(${ti})">🗑️</button>
         </span>
       </div>
@@ -185,4 +221,10 @@ function render(){
       </div>
     </div>`;
   });
+
+  // Scrolla till första dagens träning
+  if(firstTodayIndex!==-1){
+    const el = document.getElementById(`training-${firstTodayIndex}`);
+    if(el) el.scrollIntoView({behavior:"smooth", block:"center"});
+  }
 }
