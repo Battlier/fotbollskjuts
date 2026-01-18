@@ -43,7 +43,6 @@ function addTraining() {
   const place = document.getElementById("place").value.trim();
   if(!date || !startTime || !endTime || !place) return alert("Fyll i alla fält");
   if(startTime >= endTime) return alert("Sluttid måste vara senare än starttid.");
-  // Kontrollera konflikt med annan träning samma dag och tid
   const conflict = trainings.some(t=>t.date===date && t.startTime===startTime);
   if(conflict) return alert("Det finns redan en träning med samma starttid.");
   trainings.push({ date, startTime, endTime, place, drivers: [], kids: [] });
@@ -133,11 +132,10 @@ function copyKidsFromPrev(ti){
   if(prevKids.length===0) return alert("Föregående träning har inga barn.");
   let html = prevKids.map((k,i)=>`<label><input type="checkbox" id="copyKid${i}">${k.name}</label><br>`).join("");
   const container = document.createElement("div");
-  container.innerHTML = `<div style="background:#fff; border:1px solid #aaa; padding:10px; position:fixed; top:20%; left:35%; z-index:1000;">
-<h3>Kopiera barn från föregående träning</h3>${html}
+  container.className="copy-dialog";
+  container.innerHTML = `<h3>Kopiera barn från föregående träning</h3>${html}
 <button id="doCopy">Kopiera</button>
-<button onclick="document.body.removeChild(this.parentNode)">Avbryt</button>
-</div>`;
+<button onclick="document.body.removeChild(this)">Avbryt</button>`;
   document.body.appendChild(container);
   document.getElementById("doCopy").onclick = function(){
     prevKids.forEach((k,i)=>{
@@ -285,8 +283,8 @@ function render(){
 </span>
 </div>
 <div>📍 ${t.place}</div>
-<div class="sections" style="display:flex; gap:20px;">
-<div class="section" style="flex:1"><h3>🚗 Föräldrar</h3>${driversHTML || "Ingen anmäld"}
+<div class="sections">
+<div class="section"><h3>🚗 Föräldrar</h3>${driversHTML || "Ingen anmäld"}
 ${me?`<button onclick="removeDriver(${ti})">🗑️ Ta bort mig</button>`:""}
 <div style="margin-top:5px;">
 <label><input type="checkbox" ${me?.canDrive?"checked":""} onclick="toggleDriverAbility(${ti},'drive')"> Jag kan skjutsa</label><br>
@@ -298,7 +296,7 @@ ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${me?.seats===n?'selected':''}>
 </label>
 </div>
 </div>
-<div class="section" style="flex:1"><h3>⚽ Barn</h3>${kidsHTML}</div>
+<div class="section"><h3>⚽ Barn</h3>${kidsHTML}</div>
 </div></div>`;
   });
 
