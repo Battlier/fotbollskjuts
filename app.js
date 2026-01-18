@@ -90,17 +90,39 @@ function addKidRow(ti){
   trainings[ti].kids.push({name:"", needDrive:true, needPickup:true});
   save(); render();
 }
+
 function deleteKid(ti,ki){
-  trainings[ti].kids.splice(ki,1); save(); render();
+  const removedName = trainings[ti].kids[ki].name;
+  trainings[ti].drivers.forEach(d => {
+    d.driveKids = d.driveKids.filter(x => x !== removedName);
+    d.pickupKids = d.pickupKids.filter(x => x !== removedName);
+  });
+  trainings[ti].kids.splice(ki,1); 
+  save(); render();
 }
+
 function toggleKidNeed(ti,ki,type){
   const k = trainings[ti].kids[ki];
   if(type==="drive") k.needDrive = !k.needDrive;
   else k.needPickup = !k.needPickup;
   save(); render();
 }
+
 function updateKidName(ti,ki,el){
-  trainings[ti].kids[ki].name = el.value;
+  const oldName = trainings[ti].kids[ki].name;
+  const newName = el.value.trim();
+  trainings[ti].kids[ki].name = newName;
+
+  // Synkronisera alla föräldrar som redan hade gamla namnet
+  trainings[ti].drivers.forEach(d => {
+    if(d.driveKids.includes(oldName)){
+      d.driveKids = d.driveKids.map(x => x===oldName ? newName : x);
+    }
+    if(d.pickupKids.includes(oldName)){
+      d.pickupKids = d.pickupKids.map(x => x===oldName ? newName : x);
+    }
+  });
+
   save(); render();
 }
 
@@ -137,33 +159,37 @@ function getDriver(ti){
   }
   return driver;
 }
+
 function toggleDriverAbility(ti,type){
   const d = getDriver(ti);
   if(type==="drive") d.canDrive = !d.canDrive;
   else d.canPickup = !d.canPickup;
   save(); render();
 }
+
 function updateSeats(ti){
   const d = getDriver(ti);
   const sel = document.getElementById("seats"+ti);
   d.seats = parseInt(sel.value);
   save(); render();
 }
+
 function toggleAssignKid(ti,kidName,type){
   const d = getDriver(ti);
   let list = type==="drive"? d.driveKids : d.pickupKids;
-  // Kontrollera överbokning
+
   let newCount = list.includes(kidName)? list.length-1 : list.length+1;
   if(type==="drive" && newCount>d.seats){
     alert("Du försöker boka fler barn än antal lediga platser!");
     return;
   }
-  // Kontrollera om annan förälder redan har samma barn
+
   const otherAssigned = trainings[ti].drivers.some(dr=>{
     if(dr.name===d.name) return false;
     if(type==="drive") return dr.driveKids.includes(kidName);
     else return dr.pickupKids.includes(kidName);
   });
+
   if(list.includes(kidName)) list = list.filter(x=>x!==kidName);
   else{
     if(otherAssigned){ alert("Barnet har redan sin transport täckt av annan förälder."); return; }
@@ -172,6 +198,7 @@ function toggleAssignKid(ti,kidName,type){
   if(type==="drive") d.driveKids=list; else d.pickupKids=list;
   save(); render();
 }
+
 function removeDriver(ti){
   const idx = trainings[ti].drivers.findIndex(d=>d.name===user);
   if(idx!==-1) trainings[ti].drivers.splice(idx,1);
