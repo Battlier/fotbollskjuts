@@ -28,48 +28,23 @@ function addTraining() {
     date,
     time,
     place,
-    drivers: [], // {name, type}
-    kids: []     // {name, need}
+    drivers: [], 
+    kids: []     
   });
 
   save();
   render();
 }
 
-function setDriver(i) {
-  const type = prompt(
-    "Skriv:\nskjutsa\nhämta\nbåda",
-    "skjutsa"
-  );
-
-  if (!type) return;
-
-  const valid = ["skjutsa", "hämta", "båda"];
-  if (!valid.includes(type.toLowerCase())) {
-    alert("Skriv: skjutsa, hämta eller båda");
-    return;
-  }
-
-  trainings[i].drivers = trainings[i].drivers.filter(d => d.name !== user);
-  trainings[i].drivers.push({
-    name: user,
-    type: type.toLowerCase()
-  });
-
-  save();
-  render();
-}
+// ------------------ BARN ------------------
 
 function addKid(i) {
   const name = prompt("Barnets namn:");
   if (!name) return;
 
-  const need = prompt(
-    "Behöver barnet:\nskjuts\nhämtning\nbåda",
-    "skjuts"
-  );
-
+  const need = prompt("Behöver barnet:\nskjuts\nhämtning\nbåda", "båda");
   const valid = ["skjuts", "hämtning", "båda"];
+
   if (!valid.includes(need.toLowerCase())) {
     alert("Skriv: skjuts, hämtning eller båda");
     return;
@@ -84,46 +59,89 @@ function addKid(i) {
   render();
 }
 
+// ------------------ FÖRÄLDRAR ------------------
+
+function getDriver(i) {
+  let d = trainings[i].drivers.find(x => x.name === user);
+  if (!d) {
+    d = { name: user, drive: [], pickup: [] };
+    trainings[i].drivers.push(d);
+  }
+  return d;
+}
+
+function toggleDrive(i, kidName) {
+  const d = getDriver(i);
+  if (d.drive.includes(kidName)) {
+    d.drive = d.drive.filter(k => k !== kidName);
+  } else {
+    d.drive.push(kidName);
+  }
+  save();
+  render();
+}
+
+function togglePickup(i, kidName) {
+  const d = getDriver(i);
+  if (d.pickup.includes(kidName)) {
+    d.pickup = d.pickup.filter(k => k !== kidName);
+  } else {
+    d.pickup.push(kidName);
+  }
+  save();
+  render();
+}
+
+// ------------------ VISNING ------------------
+
 function render() {
   const div = document.getElementById("trainings");
   div.innerHTML = "";
 
   trainings.forEach((t, i) => {
-    const driversList = t.drivers
-      .map(d => `🚗 ${d.name} (${d.type})`)
-      .join("<br>") || "Ingen än";
+    let driversHTML = "";
+    t.drivers.forEach(d => {
+      driversHTML += `
+        🚗 <strong>${d.name}</strong><br>
+        Skjutsar: ${d.drive.join(", ") || "—"}<br>
+        Hämtar: ${d.pickup.join(", ") || "—"}<br><br>
+      `;
+    });
 
-    const kidsList = t.kids
-      .map(k => `⚽ ${k.name} (${k.need})`)
-      .join("<br>") || "Inga än";
+    let kidsHTML = "";
+    t.kids.forEach(k => {
+      const d = t.drivers.find(x => x.name === user) || { drive: [], pickup: [] };
+      const driveChecked = d.drive.includes(k.name) ? "checked" : "";
+      const pickupChecked = d.pickup.includes(k.name) ? "checked" : "";
 
-    const cars = t.drivers.length;
-    const kids = t.kids.length;
+      kidsHTML += `
+        ⚽ ${k.name} (${k.need})<br>
+        <label>
+          <input type="checkbox" ${driveChecked}
+            onclick="toggleDrive(${i}, '${k.name}')">
+          Skjutsa
+        </label>
+        <label>
+          <input type="checkbox" ${pickupChecked}
+            onclick="togglePickup(${i}, '${k.name}')">
+          Hämta
+        </label>
+        <br><br>
+      `;
+    });
 
     div.innerHTML += `
       <div class="training">
         <strong>${t.date} – ${t.time}</strong><br>
         📍 ${t.place}<br><br>
 
-        <strong>🚗 Föräldrar</strong><br>
-        ${driversList}<br>
-        <button onclick="setDriver(${i})">
-          Jag kan skjutsa / hämta
-        </button>
+        <strong>🚗 Föräldrar & deras barn</strong><br>
+        ${driversHTML || "Ingen har anmält sig än"}<br>
 
-        <br><br>
-        <strong>⚽ Barn</strong><br>
-        ${kidsList}<br>
-        <button onclick="addKid(${i})">
-          Lägg till barn
-        </button>
+        <strong>⚽ Barn (klicka för att välja vilka du kör)</strong><br>
+        ${kidsHTML || "Inga barn inlagda än"}<br>
 
-        <br><br>
-        ${
-          kids > cars
-            ? "❗ Fler barn än bilar"
-            : "✅ Tillräckligt med bilar"
-        }
+        <button onclick="addKid(${i})">Lägg till barn</button>
       </div>
     `;
   });
