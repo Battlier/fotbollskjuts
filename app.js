@@ -57,7 +57,6 @@ function editTrainingInline(i) {
   const container = document.getElementById(`training-${i}`);
   if (!container) return;
 
-  // Byt ut display med inline-formulär
   container.innerHTML = `
     <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;">
       <input type="date" id="editDate${i}" value="${t.date}">
@@ -132,7 +131,24 @@ function updateKidName(ti,ki,el){ trainings[ti].kids[ki].name = el.value; save()
 // ---------- FÖRÄLDER ----------
 function getDriver(ti){ let d=trainings[ti].drivers.find(x=>x.name===user); if(!d){ d={ name:user, canDrive:false, canPickup:false, driveKids:[], pickupKids:[] }; trainings[ti].drivers.push(d);} return d;}
 function toggleDriverAbility(ti,type){ const d=getDriver(ti); if(type==="drive") d.canDrive=!d.canDrive; if(type==="pickup") d.canPickup=!d.canPickup; if(!d.canDrive) d.driveKids=[]; if(!d.canPickup)d.pickupKids=[]; save(); render();}
-function toggleAssignKid(ti,kidName,type){ const d=getDriver(ti); let list=type==="drive"? (d.driveKids||[]) : (d.pickupKids||[]); if(list.includes(kidName)) list=list.filter(x=>x!==kidName); else list.push(kidName); if(type==="drive") d.driveKids=list; else d.pickupKids=list; save(); render();}
+function toggleAssignKid(ti,kidName,type){
+  const d=getDriver(ti); 
+  let list=type==="drive"? (d.driveKids||[]) : (d.pickupKids||[]); 
+  // --- Kontroll: ingen annan får bocka samma barn ---
+  const otherAssigned = trainings[ti].drivers.some(dr=>{
+    if(dr.name===d.name) return false;
+    if(type==="drive") return dr.driveKids.includes(kidName);
+    else return dr.pickupKids.includes(kidName);
+  });
+  if(list.includes(kidName)){
+    list=list.filter(x=>x!==kidName);
+  }else{
+    if(otherAssigned){ alert("Barnet har redan sin transport täckt av annan förälder."); return; }
+    list.push(kidName);
+  }
+  if(type==="drive") d.driveKids=list; else d.pickupKids=list;
+  save(); render();
+}
 function removeDriver(ti){ if(!confirm("Ta bort din anmälan?")) return; trainings[ti].drivers=trainings[ti].drivers.filter(d=>d.name!==user); save(); render();}
 
 // ---------- RENDER ----------
@@ -160,20 +176,26 @@ function render(){
     // ---------- Barn
     let kidsHTML = `<table style="table-layout:fixed;"><tr><th style="width:200px;">Barn</th><th>Behöver skjuts</th><th>Behöver hämtning</th><th>Du skjutsar</th><th>Du hämtar</th><th>Ta bort</th></tr>`;
     t.kids.forEach((k,ki)=>{
+      // --- Kontrollera om behov uppfyllt ---
+      const driveCovered = t.drivers.some(d=>d.driveKids?.includes(k.name));
+      const pickupCovered = t.drivers.some(d=>d.pickupKids?.includes(k.name));
       const driveChecked = k.needDrive?"checked":"";
       const pickupChecked = k.needPickup?"checked":"";
+
       const myDriveChecked = me?.driveKids?.includes(k.name)?"checked":"";
       const myPickupChecked = me?.pickupKids?.includes(k.name)?"checked":"";
 
-      const missing = t.drivers.every(d=>(k.needDrive && !d.driveKids.includes(k.name)) || (k.needPickup && !d.pickupKids.includes(k.name)));
-      const colorClass = missing ? "label-red" : "label-green";
+      // Grön om behov uppfyllt
+      const driveOk = !k.needDrive || driveCovered;
+      const pickupOk = !k.needPickup || pickupCovered;
+      const colorClass = (driveOk && pickupOk) ? "label-green" : "label-red";
 
-      kidsHTML += `<tr style="background:${missing?'#ffe6e6':'#e6ffe6'};">
+      kidsHTML += `<tr style="background:${colorClass==='label-green'?'#e6ffe6':'#ffe6e6'};">
         <td><input type="text" value="${k.name}" class="${colorClass}" style="width:100%; font-weight:bold;" onblur="updateKidName(${ti},${ki},this)"></td>
         <td><input type="checkbox" ${driveChecked} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
         <td><input type="checkbox" ${pickupChecked} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
-        <td><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive?"disabled":""}></td>
-        <td><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup?"disabled":""}></td>
+        <td><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive||driveCovered?"disabled":""}></td>
+        <td><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup||pickupCovered?"disabled":""}></td>
         <td><button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
       </tr>`;
     });
