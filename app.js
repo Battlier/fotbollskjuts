@@ -1,7 +1,7 @@
 let user = "";
 let trainings = JSON.parse(localStorage.getItem("trainings")) || [];
 
-// ---------- Säkerställ bakåtkompatibilitet ----------
+// Säkerställ bakåtkompatibilitet
 trainings.forEach(t => {
   t.drivers = t.drivers || [];
   t.kids = t.kids || [];
@@ -63,7 +63,6 @@ function editTraining(i) {
   if(!date || !startTime || !endTime || !place) return;
   if(startTime >= endTime){ alert("Sluttid måste vara senare än starttid."); return; }
 
-  // Kontrollera dubblett vid ändring
   const conflict = trainings.some((x, idx)=>idx!==i && x.date===date && x.startTime===startTime);
   if(conflict){ alert("Det finns redan en träning med samma starttid."); return; }
 
@@ -73,7 +72,6 @@ function editTraining(i) {
 
 function deleteTraining(i) { if(!confirm("Ta bort denna träning?")) return; trainings.splice(i,1); save(); render(); }
 
-// Ta bort passerade träningar
 function removePastTrainings(){
   const now = new Date();
   trainings = trainings.filter(t=>{
@@ -105,7 +103,6 @@ function render(){
   const div=document.getElementById("trainings"); if(!div) return;
   div.innerHTML="";
 
-  // Sortera per datum och starttid
   trainings.sort((a,b)=>{
     const da=a.date.localeCompare(b.date);
     if(da!==0) return da;
@@ -119,7 +116,6 @@ function render(){
     const tEndDate = new Date(t.date+"T"+t.endTime+":00");
     const isPast = tEndDate<now;
 
-    // Färgkodning per barn
     let kidsHTML="";
     t.kids.forEach((k,ki)=>{
       const driveChecked=k.needDrive?"checked":"";
@@ -127,8 +123,11 @@ function render(){
       const myDriveChecked=me?.driveKids?.includes(k.name)?"checked":"";
       const myPickupChecked=me?.pickupKids?.includes(k.name)?"checked":"";
 
-      // Röd om barn saknar skjuts/hämtning, grön annars
-      const missing = (k.needDrive && !(me?.driveKids?.includes(k.name))) || (k.needPickup && !(me?.pickupKids?.includes(k.name)));
+      // Färgkodning per barn: röd om saknar skjuts/hämtning, grön annars
+      let missing = false;
+      t.drivers.forEach(d=>{
+        if((k.needDrive && !d.driveKids.includes(k.name)) || (k.needPickup && !d.pickupKids.includes(k.name))) missing=true;
+      });
       const colorClass = missing ? "label-red" : "label-green";
 
       kidsHTML+=`⚽ <strong class="${colorClass}">${k.name}</strong><br>
@@ -148,7 +147,6 @@ function render(){
       driversHTML+=`🚗 <strong>${d.name}</strong><br>Kan skjutsa: ${d.canDrive?"✅":"❌"} | Kan hämta: ${d.canPickup?"✅":"❌"}<br>Skjutsar: ${driveKids.join(", ")||"—"}<br>Hämtar: ${pickupKids.join(", ")||"—"}<br><br>`;
     });
 
-    // Träningens bakgrund färg
     const bgColor = isPast ? "#ddd" : "#e9f5ee";
 
     div.innerHTML+=`<div class="training" style="background:${bgColor}">
