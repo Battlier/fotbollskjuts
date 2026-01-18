@@ -5,17 +5,23 @@
 <title>Fotbollsskjuts</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family: Arial; background: #f2f2f2; padding: 10px; }
-.container { max-width: 700px; background: white; margin: auto; padding: 15px; border-radius: 10px; }
-h1,h2{text-align:center;}
-input,button,select { width: 100%; padding: 10px; margin-top:5px; box-sizing:border-box; }
+body { font-family: Arial; background: #f2f2f2; padding: 10px; margin:0;}
+.container { max-width: 800px; background: white; margin: auto; padding: 15px; border-radius: 10px; }
+h1,h2{text-align:center; margin:10px 0;}
+input,button,select { padding: 8px; margin: 5px 0; box-sizing:border-box; }
 button { background:#2e8b57; color:white; border:none; border-radius:5px; cursor:pointer; }
 button:hover { background:#246b45; }
-.training { background:#e9f5ee; padding:10px; margin-top:10px; border-radius:5px; }
+.training { background:#e9f5ee; padding:15px; margin-top:15px; border-radius:10px; display:flex; flex-direction:column; gap:10px; }
+.training-header { display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; }
+.training-time { font-weight:bold; font-size:1.1em; }
+.sections { display:flex; flex-wrap:wrap; gap:20px; }
+.section { flex:1 1 300px; background:#f9f9f9; padding:10px; border-radius:8px; }
+.section h3 { margin-top:0; }
 .label-red { color:red; font-weight:bold; }
 .label-green { color:green; font-weight:bold; }
-label { margin-right:10px; }
-.time-select { width:48%; display:inline-block; }
+.checkbox-group { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.checkbox-group label { margin:0; }
+@media(max-width:600px){ .sections { flex-direction: column; } }
 </style>
 </head>
 <body>
@@ -30,14 +36,16 @@ label { margin-right:10px; }
 
   <div id="app" style="display:none">
     <h2>Lägg till träning</h2>
-    <input id="date" type="date">
-    <div>
-      <select id="startTime" class="time-select"></select>
-      <select id="endTime" class="time-select"></select>
+    <div class="checkbox-group">
+      <input id="date" type="date">
+      <select id="startTime"></select>
+      <select id="endTime"></select>
+      <input id="place" placeholder="Plats">
     </div>
-    <input id="place" placeholder="Plats">
-    <button onclick="addTraining()">Lägg till träning</button>
-    <button onclick="removePastTrainings()">🗑️ Ta bort passerade träningar</button>
+    <div class="checkbox-group">
+      <button onclick="addTraining()">Lägg till träning</button>
+      <button onclick="removePastTrainings()">🗑️ Ta bort passerade träningar</button>
+    </div>
 
     <h2>Träningar</h2>
     <div id="trainings"></div>
@@ -46,7 +54,6 @@ label { margin-right:10px; }
 
 <script src="./app.js" defer></script>
 <script>
-// Fyll i start- och sluttid med timme + 15 min intervall
 function generateTimeOptions() {
   const startSelect = document.getElementById('startTime');
   const endSelect = document.getElementById('endTime');
