@@ -1,7 +1,7 @@
 let user = "";
 let trainings = JSON.parse(localStorage.getItem("trainings")) || [];
 
-// Initiera träningsobjekt om det saknas fält
+// Initiera träningsobjekt
 trainings.forEach(t => {
   t.drivers = t.drivers || [];
   t.kids = t.kids || [];
@@ -10,7 +10,7 @@ trainings.forEach(t => {
     d.canPickup = d.canPickup || false;
     d.driveKids = d.driveKids || [];
     d.pickupKids = d.pickupKids || [];
-    d.seats = d.seats || 1;
+    d.seats = d.seats || 4; // Default 4 platser
   });
   t.kids.forEach(k => {
     k.needDrive = k.needDrive !== false;
@@ -112,7 +112,6 @@ function updateKidName(ti,ki,el){
   const newName = el.value.trim();
   trainings[ti].kids[ki].name = newName;
 
-  // Synkronisera alla föräldrar som redan hade gamla namnet
   trainings[ti].drivers.forEach(d => {
     if(d.driveKids.includes(oldName)){
       d.driveKids = d.driveKids.map(x => x===oldName ? newName : x);
@@ -125,7 +124,7 @@ function updateKidName(ti,ki,el){
   save(); render();
 }
 
-// Kopiera barn från föregående träning
+// Kopiera barn
 function copyKidsFromPrev(ti){
   if(ti===0) return alert("Ingen föregående träning att kopiera från.");
   const prevKids = trainings[ti-1].kids;
@@ -151,7 +150,7 @@ function copyKidsFromPrev(ti){
 function getDriver(ti){
   let driver = trainings[ti].drivers.find(d=>d.name===user);
   if(!driver){
-    driver = {name:user, canDrive:false, canPickup:false, driveKids:[], pickupKids:[], seats:1};
+    driver = {name:user, canDrive:false, canPickup:false, driveKids:[], pickupKids:[], seats:4};
     trainings[ti].drivers.push(driver);
     save();
   }
@@ -175,19 +174,16 @@ function updateSeats(ti){
 function toggleAssignKid(ti,kidName,type){
   const d = getDriver(ti);
   let list = type==="drive"? d.driveKids : d.pickupKids;
-
   let newCount = list.includes(kidName)? list.length-1 : list.length+1;
   if(type==="drive" && newCount>d.seats){
     alert("Du försöker boka fler barn än antal lediga platser!");
     return;
   }
-
   const otherAssigned = trainings[ti].drivers.some(dr=>{
     if(dr.name===d.name) return false;
     if(type==="drive") return dr.driveKids.includes(kidName);
     else return dr.pickupKids.includes(kidName);
   });
-
   if(list.includes(kidName)) list = list.filter(x=>x!==kidName);
   else{
     if(otherAssigned){ alert("Barnet har redan sin transport täckt av annan förälder."); return; }
@@ -228,31 +224,31 @@ function render(){
     let kidsHTML = `<table style="table-layout:fixed; width:100%; border-collapse:collapse;">
 <tr>
 <th style="width:250px;">Barn</th>
-<th style="width:80px; text-align:center;">Behöver skjuts</th>
-<th style="width:80px; text-align:center;">Behöver hämtning</th>
-<th style="width:100px; text-align:center;">Du skjutsar</th>
-<th style="width:100px; text-align:center;">Du hämtar</th>
-<th style="width:60px; text-align:center;">Ta bort</th>
+<th style="width:80px;">Behöver skjuts</th>
+<th style="width:80px;">Behöver hämtning</th>
+<th style="width:100px;">Du skjutsar</th>
+<th style="width:100px;">Du hämtar</th>
+<th style="width:60px;">Ta bort</th>
 </tr>`;
     t.kids.forEach((k,ki)=>{
       const driveCovered = t.drivers.some(d=>d.driveKids?.includes(k.name));
       const pickupCovered = t.drivers.some(d=>d.pickupKids?.includes(k.name));
       const driveOk = !k.needDrive || driveCovered;
       const pickupOk = !k.needPickup || pickupCovered;
-      const color = (driveOk && pickupOk) ? "#e6ffe6" : "#ffe6e6";
+      const rowClass = (driveOk && pickupOk) ? "success" : "warning";
       const meDriver = me || {};
       const myDriveChecked = meDriver.driveKids?.includes(k.name)?"checked":"";
       const myPickupChecked = meDriver.pickupKids?.includes(k.name)?"checked":"";
       const driveDisabled = me ? false : driveCovered;
       const pickupDisabled = me ? false : pickupCovered;
 
-      kidsHTML += `<tr style="background:${color};">
+      kidsHTML += `<tr class="${rowClass}">
 <td><input type="text" value="${k.name}" style="width:100%; font-weight:bold;" onblur="updateKidName(${ti},${ki},this)"></td>
-<td style="text-align:center"><input type="checkbox" ${k.needDrive?"checked":""} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
-<td style="text-align:center"><input type="checkbox" ${k.needPickup?"checked":""} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
-<td style="text-align:center"><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive||driveDisabled?"disabled":""}></td>
-<td style="text-align:center"><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup||pickupDisabled?"disabled":""}></td>
-<td style="text-align:center"><button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
+<td><input type="checkbox" ${k.needDrive?"checked":""} onclick="toggleKidNeed(${ti},${ki},'drive')"></td>
+<td><input type="checkbox" ${k.needPickup?"checked":""} onclick="toggleKidNeed(${ti},${ki},'pickup')"></td>
+<td><input type="checkbox" ${myDriveChecked} onclick="toggleAssignKid(${ti},'${k.name}','drive')" ${!me?.canDrive||driveDisabled?"disabled":""}></td>
+<td><input type="checkbox" ${myPickupChecked} onclick="toggleAssignKid(${ti},'${k.name}','pickup')" ${!me?.canPickup||pickupDisabled?"disabled":""}></td>
+<td><button onclick="deleteKid(${ti},${ki})">🗑️</button></td>
 </tr>`;
     });
     kidsHTML += `</table><button onclick="addKidRow(${ti})">➕ Lägg till barn</button>`;
@@ -265,18 +261,18 @@ function render(){
       const driveKids=Array.isArray(d.driveKids)?d.driveKids:[]; 
       const pickupKids=Array.isArray(d.pickupKids)?d.pickupKids:[]; 
       driversHTML += `<tr style="${d.name===user?'background:#ccf2ff':''}">
-<td>${d.name}</td><td style="text-align:center">${d.canDrive?"✅":"❌"}</td>
-<td style="text-align:center">${d.canPickup?"✅":"❌"}</td>
+<td>${d.name}</td><td>${d.canDrive?"✅":"❌"}</td>
+<td>${d.canPickup?"✅":"❌"}</td>
 <td>${driveKids.join(", ")||"—"}</td>
 <td>${pickupKids.join(", ")||"—"}</td>
-<td style="text-align:center">${d.seats||1}</td>
+<td>${d.seats||4}</td>
 </tr>`;
     });
     driversHTML += `</table>`;
 
-    div.innerHTML += `<div class="training" id="training-${ti}" style="background:${bgColor}; padding:10px; margin-bottom:10px;">
+    div.innerHTML += `<div class="training" style="background:${bgColor}; padding:10px; margin-bottom:10px;">
 <div class="training-header">
-<span class="training-time">${t.date} ${t.startTime}-${t.endTime}</span>
+<span>${t.date} ${t.startTime}-${t.endTime}</span>
 <span>
 <button onclick="editTrainingInline(${ti})">✏️</button>
 <button onclick="deleteTraining(${ti})">🗑️</button>
